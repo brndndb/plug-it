@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Plug Adventure</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif;
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 500px;
+        }
+        canvas {
+            border: 3px solid #555;
+            display: block;
+            background-color: #87CEEB; /* Sky blue background */
+        }
+        #ui-container {
+            width: 800px;
+            padding: 10px;
+            background-color: #222;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+        }
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .menu-screen h1 {
+            margin-bottom: 20px;
+            color: #FFD700; /* Gold color */
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+        border-collapse: collapse;
+        width: 80%;
+        margin: 20px auto;
+        color: white;
+        }
+
+        table, th, td {
+            border: 1px solid #444;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #333;
+        }
+
+        tr:nth-child(even) {
+            background-color: #444;
+        }
+
+        tr:nth-child(odd) {
+            background-color: #555;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            margin: 10px 0;
+            border: 2px solid #4CAF50;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        #gameCanvas {
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .menu-screen {
+            text-align: center;
+        }
+
+        .menu-screen p {
+            margin: 15px 0;
+            font-size: 18px;
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #easyBtn {
+            background-color: #2ECC40;
+        }
+
+        #mediumBtn {
+            background-color: #FF851B;
+        }
+
+        #hardBtn {
+            background-color: #FF4136;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <!-- Start Screen -->
+        <div id="startScreen" class="menu-screen">
+            <h1>Power Plug Adventure</h1>
+            <div>
+                <button id="easyBtn" class="button">Easy</button>
+                <button id="mediumBtn" class="button">Medium</button>
+                <button id="hardBtn" class="button">Hard</button>
+            </div>
+            <p>Use arrow keys to move and space to jump</p>
+        </div>
+        
+        <!-- Level Complete Screen -->
+        <div id="levelComplete" class="menu-screen" style="display:none;">
+            <h1>Level Complete!</h1>
+            <p id="levelScore">Score: 0</p>
+            <button id="nextLevelBtn" class="button">Next Level</button>
+        </div>
+        
+        <!-- Game Over Screen -->
+        <div id="gameOver" class="menu-screen" style="display:none;">
+            <h1>Game Over</h1>
+            <p id="finalScore">Final Score: 0</p>
+            <div>
+                <label for="playerName">Your Name: </label>
+                <input type="text" id="playerName" maxlength="10">
+            </div>
+            <button id="saveScoreBtn" class="button">Save Score</button>
+            <button id="restartBtn" class="button">Play Again</button>
+        </div>
+        
+        <!-- High Scores Screen -->
+        <div id="highScores" class="menu-screen" style="display:none;">
+            <h1>High Scores</h1>
+            <div id="scoresList"></div>
+            <button id="backBtn" class="button">Back to Menu</button>
+        </div>
+    </div>
+    
+    <div id="ui-container">
+        <div>Level: <span id="level">1</span></div>
+        <div>Score: <span id="score">0</span></div>
+        <div>Lives: <span id="lives">3</span></div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
