@@ -58,6 +58,8 @@
             color: #FFD700; /* Gold color */
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
             font-size: 2.5em;
+            width: 90%; /* Ensure text doesn't overflow */
+            text-align: center;
         }
         .button {
             background-color: #4CAF50;
@@ -190,6 +192,9 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 30px;
             text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            width: 90%; /* Prevent overflow */
+            text-align: center;
+            padding: 0 10px;
         }
         
         .game-controls {
@@ -198,6 +203,19 @@
             border-radius: 10px;
             margin: 20px 0;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            width: 90%;
+        }
+        
+        .game-controls p {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .game-controls p .icon {
+            margin-right: 10px;
+            font-size: 24px;
         }
         
         @keyframes slide-in {
@@ -228,6 +246,30 @@
             canvas {
                 width: 100%;
             }
+            .game-title {
+                font-size: 2.2em;
+            }
+        }
+
+        /* Tutorial styles */
+        #tutorialOverlay {
+            z-index: 1000;
+        }
+        
+        #tutorialContent {
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        #tutorialText {
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+        
+        .tutorial-icon {
+            font-size: 40px;
+            margin: 10px 0;
+            color: #FFD700;
         }
     </style>
 </head>
@@ -244,9 +286,9 @@
                 <button id="hardBtn" class="button">Hard</button>
             </div>
             <div class="game-controls">
-                <p>Use arrow keys to move and space to jump</p>
-                <p>Press ESC to pause the game</p>
-                <p>CTRL+S to save your progress</p>
+                <p><span class="icon">⬅️➡️</span> Use arrow keys to move and space to jump</p>
+                <p><span class="icon">⏸️</span> Press ESC to pause the game</p>
+                <p><span class="icon">💾</span> CTRL+S to save your progress</p>
             </div>
         </div>
         
