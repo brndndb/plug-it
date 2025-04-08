@@ -39,7 +39,7 @@
             border-bottom-left-radius: 5px;
             border-bottom-right-radius: 5px;
         }
-        .menu-screen {
+       .menu-screen {
             position: absolute;
             top: 0;
             left: 0;
@@ -50,8 +50,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Changed from center to flex-start */
+            padding-top: 50px; /* Add padding at the top */
             transition: all 0.3s ease;
+            text-align: center;
+            overflow-y: auto; /* Allow scrolling if needed */
         }
         .menu-screen h1 {
             margin-bottom: 20px;
@@ -183,14 +186,16 @@
         
         /* Fixed title style */
         .game-title {
+            position: relative;
             font-size: 42px;
             font-weight: bold;
             color: #FFD700;
             text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            margin-top: 30px; /* This is crucial - pushes the title down */
             margin-bottom: 30px;
+            padding-top: 20px; /* Additional padding at the top */
             max-width: 90%;
             text-align: center;
-            line-height: 1.2;
         }
         
         .game-controls {
