@@ -346,10 +346,26 @@ window.onload = function() {
     
     // Add sound toggle
     addSoundToggle();
+
     
     // Add window resize handler for responsive canvas
     window.addEventListener('resize', adjustCanvasSize);
     adjustCanvasSize();
+
+    function initializeImprovedLevels() {
+        // Store the original applyDifficultySettings function
+        const originalApplyDifficultySettings = applyDifficultySettings;
+        
+        // Override the applyDifficultySettings function
+        applyDifficultySettings = function() {
+            // Call the original function first
+            originalApplyDifficultySettings();
+            
+            // Then update the levels with our improved design
+            updateLevelData();
+        };
+}
+    
 };
 
 function adjustCanvasSize() {
@@ -2493,4 +2509,207 @@ function togglePause() {
             requestAnimationFrame(gameLoop);
         }
     }
+}
+
+
+// Improved level design function to properly space game elements
+function designLevel(difficulty) {
+    // Set up level dimensions
+    const levelWidth = 800;
+    const groundY = 450;
+    
+    // Player jump metrics (these determine platform placement)
+    const playerJumpHeight = difficulty === 'easy' ? 120 : (difficulty === 'medium' ? 110 : 100);
+    const playerJumpDistance = difficulty === 'easy' ? 180 : (difficulty === 'medium' ? 160 : 140);
+    
+    // Platform dimensions
+    const platformWidth = difficulty === 'easy' ? 100 : (difficulty === 'medium' ? 80 : 60);
+    const platformHeight = 20;
+    
+    // Create level structure
+    const level = {
+        platforms: [
+            { x: 0, y: groundY, width: levelWidth, height: 50 } // Ground platform
+        ],
+        obstacles: [],
+        coins: [],
+        powerUps: [],
+        outlet: { x: 720, y: 160, width: 40, height: 40 }
+    };
+    
+    // Create a path of platforms the player can follow
+    let currentX = 100;
+    let currentY = groundY - 80; // Start first platform at a reasonable height
+    
+    // Number of platforms based on difficulty
+    const platformCount = difficulty === 'easy' ? 7 : (difficulty === 'medium' ? 5 : 4);
+    
+    for (let i = 0; i < platformCount; i++) {
+        // Add some variety to platform height
+        const heightVariation = Math.random() * 30 - 15;
+        currentY = Math.max(150, Math.min(groundY - 80, currentY + heightVariation));
+        
+        // Add the platform
+        level.platforms.push({
+            x: currentX,
+            y: currentY,
+            width: platformWidth + Math.random() * 20,
+            height: platformHeight
+        });
+        
+        // Add a coin on some platforms
+        if (Math.random() > 0.3) {
+            level.coins.push({
+                x: currentX + platformWidth/3,
+                y: currentY - 30,
+                width: 20,
+                height: 20,
+                collected: false
+            });
+        }
+        
+        // Move to next platform position
+        const distanceMultiplier = 0.7 + Math.random() * 0.6; // 70% to 130% of standard jump
+        currentX += playerJumpDistance * distanceMultiplier;
+        
+        // Occasionally raise or lower the path
+        if (i > 0 && i < platformCount - 1 && Math.random() > 0.5) {
+            currentY -= Math.random() * 60;
+            currentY = Math.max(120, currentY); // Don't go too high
+        }
+    }
+    
+    // Place obstacles intelligently
+    const obstacleCount = difficulty === 'easy' ? 3 : (difficulty === 'medium' ? 5 : 7);
+    
+    // Place obstacles on the ground between platforms
+    for (let i = 0; i < obstacleCount; i++) {
+        // Find a spot not too close to platforms
+        let validSpot = false;
+        let obstacleX, obstacleY;
+        
+        const maxAttempts = 10;
+        let attempts = 0;
+        
+        while (!validSpot && attempts < maxAttempts) {
+            obstacleX = 100 + Math.random() * (levelWidth - 200);
+            obstacleY = groundY - 20; // Place on the ground
+            
+            // Check distance from all platforms
+            validSpot = true;
+            for (let platform of level.platforms) {
+                // Skip the ground
+                if (platform.y >= groundY) continue;
+                
+                // If the obstacle is directly under a platform, it's not valid
+                if (obstacleX > platform.x - 30 && obstacleX < platform.x + platform.width + 10) {
+                    validSpot = false;
+                    break;
+                }
+            }
+            
+            attempts++;
+        }
+        
+        if (validSpot) {
+            level.obstacles.push({
+                x: obstacleX,
+                y: obstacleY,
+                width: 20,
+                height: 20
+            });
+        }
+    }
+    
+    // Add moving obstacles on platforms if difficulty is medium or hard
+    if (difficulty !== 'easy') {
+        const platformObstacleCount = difficulty === 'medium' ? 2 : 3;
+        
+        // Select random platforms (excluding first and last) to place obstacles on
+        const availablePlatforms = level.platforms.filter(p => 
+            p.y < groundY && p.x > 150 && p.x < 650);
+        
+        for (let i = 0; i < Math.min(platformObstacleCount, availablePlatforms.length); i++) {
+            const platform = availablePlatforms[Math.floor(Math.random() * availablePlatforms.length)];
+            
+            // Remove this platform from available platforms for next iterations
+            availablePlatforms.splice(availablePlatforms.indexOf(platform), 1);
+            
+            // Add an obstacle on this platform
+            const obstacle = {
+                x: platform.x + platform.width/2 - 10,
+                y: platform.y - 20,
+                width: 20,
+                height: 20,
+                speedX: difficulty === 'medium' ? 0.4 : 0.7,
+                startX: platform.x + platform.width/2 - 10,
+                range: platform.width * 0.7
+            };
+            
+            level.obstacles.push(obstacle);
+        }
+    }
+    
+    // Place power-ups
+    const powerUpCount = difficulty === 'easy' ? 2 : (difficulty === 'medium' ? 1 : 1);
+    const powerUpTypes = ['SPEED_BOOST', 'EXTRA_LIFE', 'INVINCIBILITY'];
+    
+    // Place power-ups on platforms
+    const availablePowerUpPlatforms = level.platforms.filter(p => 
+        p.y < groundY && p.x > 200);
+    
+    for (let i = 0; i < Math.min(powerUpCount, availablePowerUpPlatforms.length); i++) {
+        const platform = availablePowerUpPlatforms[Math.floor(Math.random() * availablePowerUpPlatforms.length)];
+        
+        // Remove this platform from available platforms for next iterations
+        availablePowerUpPlatforms.splice(availablePowerUpPlatforms.indexOf(platform), 1);
+        
+        // Choose a random power-up type
+        const randomType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+        
+        level.powerUps.push({
+            x: platform.x + platform.width/2 - 15,
+            y: platform.y - 35,
+            width: 30,
+            height: 30,
+            type: randomType,
+            collected: false,
+            pulseRate: 0.005 + (Math.random() * 0.01),
+            pulseTime: 0
+        });
+    }
+    
+    // Update outlet position based on the final platform for a better finish
+    if (level.platforms.length > 2) {
+        const finalPlatform = level.platforms[level.platforms.length - 1];
+        level.outlet.x = finalPlatform.x + finalPlatform.width/2 - 20;
+        level.outlet.y = finalPlatform.y - 50;
+    }
+    
+    return level;
+}
+
+// Function to update the level data with the improved design
+function updateLevelData() {
+    levels[0] = designLevel('easy');
+    levels[1] = designLevel('medium');
+    levels[2] = designLevel('hard');
+    
+    // Update levelWidth based on the rightmost platform or object
+    let rightmostX = 0;
+    
+    for (let level of levels) {
+        // Check platforms
+        level.platforms.forEach(platform => {
+            const platformRight = platform.x + platform.width;
+            if (platformRight > rightmostX) rightmostX = platformRight;
+        });
+        
+        // Check outlet
+        const outletRight = level.outlet.x + level.outlet.width;
+        if (outletRight > rightmostX) rightmostX = outletRight;
+    }
+    
+    // Set level width with some extra space
+    levelWidth = Math.max(rightmostX + 200, canvas.width);
 }
