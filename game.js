@@ -1886,14 +1886,81 @@ function applyDifficultySettings() {
         }
     });
     
-    // Add more platforms for easy mode
-    if (game.difficulty === 'easy') {
+    // Add extra platforms for easier difficulties
+    if (settings.extraPlatforms > 0) {
         levels.forEach(level => {
-            // Add a few more platforms to make it easier
-            for (let i = 0; i < 2; i++) {
+            // Use smart platform placement instead of random locations
+            for (let i = 0; i < settings.extraPlatforms; i++) {
+                // Find gaps between existing platforms to place new platforms
+                let platforms = level.platforms.filter(p => p.y < 450); // Exclude ground
+                
+                // Sort platforms by x position to find gaps
+                platforms.sort((a, b) => a.x - b.x);
+                
+                // Find the largest horizontal gap
+                let maxGap = 0;
+                let gapX = 100;
+                let gapY = 350;
+                
+                // Check gaps between existing platforms
+                for (let j = 0; j < platforms.length - 1; j++) {
+                    const currentPlatform = platforms[j];
+                    const nextPlatform = platforms[j + 1];
+                    
+                    const gap = nextPlatform.x - (currentPlatform.x + currentPlatform.width);
+                    
+                    if (gap > maxGap && gap > 100) { // Minimum gap size to add a platform
+                        maxGap = gap;
+                        gapX = currentPlatform.x + currentPlatform.width + gap / 2 - 35; // Center in the gap
+                        
+                        // Choose y position that makes a reachable jump (between the two platforms)
+                        const avgY = (currentPlatform.y + nextPlatform.y) / 2;
+                        // Vary the height slightly for variety
+                        gapY = avgY + (Math.random() * 40 - 20);
+                        
+                        // Keep within reasonable jump height
+                        gapY = Math.max(200, Math.min(400, gapY));
+                    }
+                }
+                
+                // If we didn't find a good gap, find a vertical gap where a platform could help player reach higher
+                if (maxGap < 100) {
+                    // Look for places where platforms are stacked too high to reach with a normal jump
+                    for (let j = 0; j < platforms.length; j++) {
+                        for (let k = 0; k < platforms.length; k++) {
+                            const lowerPlatform = platforms[j];
+                            const upperPlatform = platforms[k];
+                            
+                            // Check if one platform is above another at a height that might be hard to reach
+                            if (upperPlatform.y < lowerPlatform.y && 
+                                Math.abs(upperPlatform.x - lowerPlatform.x) < 150 &&
+                                lowerPlatform.y - upperPlatform.y > 120) { // Too high to jump
+                                
+                                // Place a stepping platform in between
+                                gapX = (lowerPlatform.x + upperPlatform.x) / 2;
+                                gapY = lowerPlatform.y - 60; // A jumpable height above lower platform
+                            }
+                        }
+                    }
+                }
+                
+                // Final fallback - place platforms to help reach the outlet
+                if (maxGap < 100) {
+                    const outlet = level.outlet;
+                    const platformsNearOutlet = platforms.filter(p => 
+                        Math.abs(p.x - outlet.x) < 200 && p.y < outlet.y);
+                    
+                    if (platformsNearOutlet.length === 0 && outlet.y < 400) {
+                        // No platforms near the outlet, add one
+                        gapX = outlet.x - 80 - (i * 20); // Slightly offset for multiple platforms
+                        gapY = outlet.y + 40 + (i * 30);
+                    }
+                }
+                
+                // Add the new platform
                 level.platforms.push({
-                    x: 100 + Math.random() * 500,
-                    y: 200 + Math.random() * 200,
+                    x: gapX,
+                    y: gapY,
                     width: 70,
                     height: 20
                 });
