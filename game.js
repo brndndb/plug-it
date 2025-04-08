@@ -1582,8 +1582,7 @@ function updateFloatingMessages() {
     }
 }
 
-//Draw function
-
+// Improved draw function with proper z-ordering
 function draw() {
     // Clear with sky gradient
     const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -1595,14 +1594,16 @@ function draw() {
     // Save the context state before applying camera transform
     ctx.save();
     
-    // Apply camera transform - this is the key change
+    // Apply camera transform
     ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
     
-    // Draw all game elements with camera offset
+    // Draw background elements first
     drawBackground();
     
-    // Draw game elements
     const currentLevel = levels[game.level - 1];
+    
+    // GROUP 1: BACK LAYER - Draw the ground and platforms
+    // --------------------------------------------------------
     
     // Draw platforms
     currentLevel.platforms.forEach(platform => {
@@ -1625,6 +1626,26 @@ function draw() {
             ctx.lineTo(platform.x + platform.width, platform.y + i);
             ctx.stroke();
         }
+    });
+    
+    // Draw outlet
+    ctx.fillStyle = '#FFFFFF'; // White for the outlet
+    const outlet = currentLevel.outlet;
+    
+    // Draw outlet with socket detail
+    ctx.fillRect(outlet.x, outlet.y, outlet.width, outlet.height);
+    
+    // Draw socket holes
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(outlet.x + outlet.width/4, outlet.y + outlet.height/3, outlet.width/5, outlet.height/3);
+    ctx.fillRect(outlet.x + outlet.width*2/4, outlet.y + outlet.height/3, outlet.width/5, outlet.height/3);
+    
+    // GROUP 2: MIDDLE LAYER - Draw obstacles and collectibles
+    // --------------------------------------------------------
+    
+    // Draw obstacles
+    currentLevel.obstacles.forEach(obstacle => {
+        drawObstacle(obstacle);
     });
     
     // Draw shining coins with animation
@@ -1712,22 +1733,8 @@ function draw() {
         });
     }
     
-    // Draw obstacles
-    currentLevel.obstacles.forEach(obstacle => {
-        drawObstacle(obstacle);
-    });
-
-    // Draw outlet
-    ctx.fillStyle = '#FFFFFF'; // White for the outlet
-    const outlet = currentLevel.outlet;
-    
-    // Draw outlet with socket detail
-    ctx.fillRect(outlet.x, outlet.y, outlet.width, outlet.height);
-    
-    // Draw socket holes
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(outlet.x + outlet.width/4, outlet.y + outlet.height/3, outlet.width/5, outlet.height/3);
-    ctx.fillRect(outlet.x + outlet.width*2/4, outlet.y + outlet.height/3, outlet.width/5, outlet.height/3);
+    // GROUP 3: FRONT LAYER - Draw player and effects
+    // --------------------------------------------------------
     
     // Draw player (plug)
     if (player.invincible) {
@@ -1759,12 +1766,216 @@ function draw() {
     });
     ctx.globalAlpha = 1; // Reset alpha
     
-    
     // Restore the context to remove camera transform for UI elements
     ctx.restore();
         
     // Draw UI elements
     drawUI();
+}
+
+// Add a z-order sorting function for objects before drawing
+function sortGameObjectsByZOrder(level) {
+    // Create a copy of all objects with z-order information
+    let allObjects = [];
+    
+    // Add platforms (back layer)
+    level.platforms.forEach(platform => {
+        allObjects.push({
+            type: 'platform',
+            obj: platform,
+            zOrder: 0 // Lowest z-order
+        });
+    });
+    
+    // Add outlet (back layer)
+    allObjects.push({
+        type: 'outlet',
+        obj: level.outlet,
+        zOrder: 1
+    });
+    
+    // Add obstacles (middle layer)
+    level.obstacles.forEach(obstacle => {
+        allObjects.push({
+            type: 'obstacle',
+            obj: obstacle,
+            zOrder: 2
+        });
+    });
+    
+    // Add coins (middle layer)
+    level.coins.forEach(coin => {
+        if (!coin.collected) {
+            allObjects.push({
+                type: 'coin',
+                obj: coin,
+                zOrder: 3
+            });
+        }
+    });
+    
+    // Add power-ups (middle layer)
+    if (level.powerUps) {
+        level.powerUps.forEach(powerUp => {
+            if (!powerUp.collected) {
+                allObjects.push({
+                    type: 'powerUp',
+                    obj: powerUp,
+                    zOrder: 4
+                });
+            }
+        });
+    }
+    
+    // Add player (front layer)
+    allObjects.push({
+        type: 'player',
+        obj: player,
+        zOrder: 5 // Highest z-order
+    });
+    
+    // Sort by z-order
+    return allObjects.sort((a, b) => a.zOrder - b.zOrder);
+}
+
+// Add a function to handle platform overlap and ensure they don't stack directly on top of each other
+function fixPlatformOverlap() {
+    levels.forEach(level => {
+        // Create a new array for platforms after fixing overlap
+        const fixedPlatforms = [];
+        
+        // Start with the ground platform
+        const groundPlatform = level.platforms.find(p => p.y >= 450);
+        if (groundPlatform) {
+            fixedPlatforms.push(groundPlatform);
+        }
+        
+        // Sort other platforms by y position (top to bottom)
+        const otherPlatforms = level.platforms
+            .filter(p => p.y < 450)
+            .sort((a, b) => a.y - b.y);
+        
+        // Check each platform against all previously added platforms
+        otherPlatforms.forEach(platform => {
+            let overlapping = false;
+            let shiftX = 0;
+            let shiftY = 0;
+            
+            // Check for overlap with already fixed platforms
+            for (let i = 0; i < fixedPlatforms.length; i++) {
+                const existingPlatform = fixedPlatforms[i];
+                
+                // Skip ground platform in overlap check
+                if (existingPlatform.y >= 450) continue;
+                
+                // Check if platforms overlap
+                const overlapX = Math.max(0, 
+                    Math.min(platform.x + platform.width, existingPlatform.x + existingPlatform.width) - 
+                    Math.max(platform.x, existingPlatform.x)
+                );
+                
+                const overlapY = Math.max(0,
+                    Math.min(platform.y + platform.height, existingPlatform.y + existingPlatform.height) - 
+                    Math.max(platform.y, existingPlatform.y)
+                );
+                
+                // If platforms overlap significantly
+                if (overlapX > 10 && overlapY > 0) {
+                    overlapping = true;
+                    
+                    // Calculate shift amounts
+                    if (overlapY < 20) {
+                        // Small vertical overlap - adjust vertically
+                        if (platform.y < existingPlatform.y) {
+                            shiftY = Math.min(shiftY, existingPlatform.y - platform.y - platform.height - 5);
+                        } else {
+                            shiftY = Math.max(shiftY, existingPlatform.y + existingPlatform.height - platform.y + 5);
+                        }
+                    } else {
+                        // Significant overlap - adjust horizontally
+                        if (platform.x < existingPlatform.x) {
+                            shiftX = Math.min(shiftX, existingPlatform.x - platform.x - platform.width - 5);
+                        } else {
+                            shiftX = Math.max(shiftX, existingPlatform.x + existingPlatform.width - platform.x + 5);
+                        }
+                    }
+                }
+            }
+            
+            // Apply shifts if overlapping
+            if (overlapping) {
+                if (Math.abs(shiftY) > 0) {
+                    platform.y += shiftY;
+                } else if (Math.abs(shiftX) > 0) {
+                    platform.x += shiftX;
+                }
+                
+                // Ensure platform is still within screen bounds
+                platform.x = Math.max(0, Math.min(800 - platform.width, platform.x));
+                platform.y = Math.max(50, Math.min(450 - platform.height, platform.y));
+            }
+            
+            fixedPlatforms.push(platform);
+        });
+        
+        // Replace original platforms with fixed platforms
+        level.platforms = fixedPlatforms;
+    });
+}
+
+// Call this after applying difficulty settings
+function applyRenderingFixes() {
+    // Fix overlapping platforms
+    fixPlatformOverlap();
+    
+    // Ensure obstacles don't overlap with platforms
+    levels.forEach(level => {
+        level.obstacles.forEach(obstacle => {
+            level.platforms.forEach(platform => {
+                // Skip ground platform
+                if (platform.y >= 450) return;
+                
+                // Check if obstacle is inside platform
+                if (obstacle.x >= platform.x && 
+                    obstacle.x + obstacle.width <= platform.x + platform.width &&
+                    obstacle.y >= platform.y && 
+                    obstacle.y + obstacle.height <= platform.y + platform.height) {
+                    // Move obstacle to top of platform
+                    obstacle.y = platform.y - obstacle.height - 2;
+                }
+            });
+        });
+    });
+}
+
+// Call this function after loading a level
+function prepareLevel(levelNum) {
+    // Apply z-order sorting and overlap fixes to the current level
+    const currentLevel = levels[levelNum-1];
+    
+    // Fix any objects that might be stacked incorrectly
+    sortGameObjectsByZOrder(currentLevel);
+    
+    // Ensure coins aren't inside platforms
+    currentLevel.coins.forEach(coin => {
+        let insidePlatform = false;
+        
+        currentLevel.platforms.forEach(platform => {
+            // Skip ground platform
+            if (platform.y >= 450) return;
+            
+            // Check if coin is inside platform
+            if (coin.x > platform.x && 
+                coin.x + coin.width < platform.x + platform.width &&
+                coin.y > platform.y && 
+                coin.y + coin.height < platform.y + platform.height) {
+                insidePlatform = true;
+                
+                // Move coin to top of platform
+                coin.y = platform.y - coin.height - 2;
+            }
+        });
+    });
 }
 
 function drawObstacle(obstacle) {
