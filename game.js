@@ -294,8 +294,6 @@ const levels = [
     }
 ];
 
-
-// Update the window.onload function to initialize physics
 window.onload = function() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
@@ -346,27 +344,86 @@ window.onload = function() {
     
     // Add sound toggle
     addSoundToggle();
-
     
     // Add window resize handler for responsive canvas
     window.addEventListener('resize', adjustCanvasSize);
     adjustCanvasSize();
 
-    function initializeImprovedLevels() {
-        // Store the original applyDifficultySettings function
-        const originalApplyDifficultySettings = applyDifficultySettings;
-        
-        // Override the applyDifficultySettings function
-        applyDifficultySettings = function() {
-            // Call the original function first
-            originalApplyDifficultySettings();
-            
-            // Then update the levels with our improved design
-            updateLevelData();
-        };
-}
-    
+    // IMPORTANT: Call this function to initialize dynamic level generation
+    initializeDynamicLevels();
 };
+
+function initializeDynamicLevels() {
+    console.log("Initializing dynamic level generation");
+    // Ensure the game always uses generateDynamicLevel when loading levels
+    
+    // Store the original loadLevel function for reference
+    const originalLoadLevel = loadLevel;
+    
+    // Override loadLevel to use our dynamic generation
+    loadLevel = function(levelNum) {
+        console.log("Loading dynamically generated level:", levelNum);
+        
+        // Reset player position
+        player.x = 50;
+        player.y = 400;
+        player.speedX = 0;
+        player.speedY = 0;
+        player.isJumping = false;
+        
+        // Generate a new level or get an existing one
+        let level;
+        if (levelNum <= levels.length) {
+            // Replace the existing level with a new one
+            levels[levelNum - 1] = generateDynamicLevel(levelNum);
+            level = levels[levelNum - 1];
+        } else {
+            // Create a new level and add it to the levels array
+            level = generateDynamicLevel(levelNum);
+            levels.push(level);
+        }
+        
+        // Set level width based on the rightmost platform or object
+        let rightmostX = 0;
+        
+        // Check platforms
+        level.platforms.forEach(platform => {
+            const platformRight = platform.x + platform.width;
+            if (platformRight > rightmostX) rightmostX = platformRight;
+        });
+        
+        // Check outlet
+        const outletRight = level.outlet.x + level.outlet.width;
+        if (outletRight > rightmostX) rightmostX = outletRight;
+        
+        // Set level width with some extra space
+        levelWidth = Math.max(rightmostX + 200, canvas.width);
+        
+        // Reset level coins
+        level.coins.forEach(coin => {
+            coin.collected = false;
+        });
+        
+        // Reset power-ups if they exist
+        if (level.powerUps && level.powerUps.length > 0) {
+            level.powerUps.forEach(powerUp => {
+                powerUp.collected = false;
+            });
+        }
+        
+        // Start level timer
+        startLevelTimer();
+        
+        // Prepare level objects
+        prepareLevel(levelNum);
+        
+        // Start tracking if player loses lives
+        game.levelStartLives = game.lives;
+        
+        setGameRunning(true);
+        gameLoop();
+    };
+}
 
 function adjustCanvasSize() {
     // Only apply responsive scaling on smaller screens
@@ -2723,13 +2780,18 @@ function updateLevelData() {
 }
 
 function generateDynamicLevel(levelNum) {
+    console.log("Generating dynamic level:", levelNum, "with difficulty:", game.difficulty);
     const difficulty = game.difficulty;
     
     // Base parameters
     const groundY = 450;
-    const platformCount = levelNum * 2 + (difficulty === 'easy' ? 3 : (difficulty === 'medium' ? 2 : 1));
-    const obstacleCount = levelNum + (difficulty === 'easy' ? 1 : (difficulty === 'medium' ? 2 : 3));
-    const coinCount = platformCount;
+    
+    // Adjust parameters based on level number for progressive difficulty
+    const platformCount = Math.min(3 + levelNum, 12); // More platforms in higher levels, cap at 12
+    
+    // Obstacles increase with level
+    const groundObstacleCount = Math.min(levelNum + 1, 8); // More obstacles in higher levels, cap at 8
+    const movingObstacleCount = difficulty === 'easy' ? 0 : Math.min(Math.floor(levelNum/2), 5);
     
     // Create empty level structure
     const level = {
@@ -2742,14 +2804,24 @@ function generateDynamicLevel(levelNum) {
         outlet: { x: 0, y: 0, width: 40, height: 40 }
     };
     
-    // Create platform path
-    let lastX = 50;
+    // Create platform path - we'll use a more careful approach
+    let lastX = 80;
     let lastY = groundY - 80;
-    const jumpDistance = difficulty === 'easy' ? 160 : (difficulty === 'medium' ? 140 : 120);
+    
+    // Calculate jump distances based on difficulty and player capabilities
+    const baseJumpDistance = 
+        difficulty === 'easy' ? 140 : 
+        (difficulty === 'medium' ? 160 : 180);
+    
+    const maxJumpHeight =
+        difficulty === 'easy' ? 100 :
+        (difficulty === 'medium' ? 110 : 120);
     
     for (let i = 0; i < platformCount; i++) {
-        // Create platform
-        const platformWidth = 60 + Math.random() * 50;
+        // Platform width varies slightly
+        const platformWidth = 60 + Math.random() * 40;
+        
+        // Add platform
         const platform = {
             x: lastX,
             y: lastY,
@@ -2759,10 +2831,10 @@ function generateDynamicLevel(levelNum) {
         
         level.platforms.push(platform);
         
-        // Add coin on platform
-        if (i < coinCount) {
+        // Add coin on most platforms (80% chance)
+        if (Math.random() < 0.8) {
             level.coins.push({
-                x: lastX + platformWidth / 3,
+                x: lastX + platformWidth/2 - 10,
                 y: lastY - 30,
                 width: 20,
                 height: 20,
@@ -2770,77 +2842,130 @@ function generateDynamicLevel(levelNum) {
             });
         }
         
-        // Move to next position
-        lastX += jumpDistance + Math.random() * 40;
+        // Calculate next position - careful spacing that player can jump to
+        // Add some randomness but ensure it's reachable
+        const jumpVariation = Math.random() * 30 - 10; // -10 to +20 variation
+        const jumpDistance = baseJumpDistance + jumpVariation;
         
-        // Adjust height - platforms get higher as we progress
+        lastX += jumpDistance;
+        
+        // Height changes - gradually get higher with some variation
         if (i < platformCount - 1) {
-            // Random height change, trending upward
-            const heightChange = Math.random() * 40 - 15;
-            lastY = Math.max(150, Math.min(groundY - 60, lastY + heightChange));
+            // Mix of up and down, but trending upward for overall challenge
+            const heightVariation = Math.random() * 60 - 20; // -20 to +40 variation
             
-            // Every third platform, try to go higher for challenge
-            if (i % 3 === 2) {
-                lastY -= 30 * levelNum;
-                lastY = Math.max(100, lastY);
+            // For higher levels, make greater height differences
+            const levelBonus = levelNum * 5; // Higher levels have higher platforms
+            lastY = Math.max(100, Math.min(groundY - 60, lastY - heightVariation - levelBonus));
+            
+            // Make sure jumps are possible (not too high)
+            const maxJumpableHeight = maxJumpHeight * 0.8; // 80% of max jump for safety
+            if (lastY < platform.y - maxJumpableHeight) {
+                lastY = platform.y - maxJumpableHeight + 10; // Keep it jumpable
             }
         }
     }
     
-    // Place obstacles
-    for (let i = 0; i < obstacleCount; i++) {
-        // Ground obstacles
-        level.obstacles.push({
-            x: 150 + i * 180 + Math.random() * 50,
-            y: groundY - 20,
-            width: 20,
-            height: 20
-        });
+    // Add ground obstacles - properly spaced
+    for (let i = 0; i < groundObstacleCount; i++) {
+        // Space obstacles evenly with some randomness
+        const obstacleX = 150 + (i * 600/groundObstacleCount) + (Math.random() * 50 - 25);
         
-        // For medium and hard, add some moving obstacles on platforms
-        if (difficulty !== 'easy' && i < obstacleCount - 1 && level.platforms.length > 3) {
-            const platform = level.platforms[2 + i % (level.platforms.length - 3)];
+        // Make sure obstacles don't block jumping to platforms
+        let validPosition = true;
+        for (let j = 1; j < level.platforms.length; j++) {
+            const platform = level.platforms[j];
+            // Don't place obstacles directly below platforms or in jump paths
+            if (Math.abs(obstacleX - platform.x) < 40) {
+                validPosition = false;
+                break;
+            }
+        }
+        
+        if (validPosition) {
             level.obstacles.push({
-                x: platform.x + platform.width / 2,
+                x: obstacleX,
+                y: groundY - 20,
+                width: 20,
+                height: 20
+            });
+        }
+    }
+    
+    // Add moving obstacles on platforms for medium and hard difficulties
+    if (movingObstacleCount > 0) {
+        // Get platforms we can put obstacles on (not the first or last platform)
+        const availablePlatforms = level.platforms.filter((p, idx) => 
+            idx > 1 && idx < level.platforms.length - 1 && p.y < groundY);
+        
+        // Shuffle platforms to randomize placement
+        shuffleArray(availablePlatforms);
+        
+        for (let i = 0; i < Math.min(movingObstacleCount, availablePlatforms.length); i++) {
+            const platform = availablePlatforms[i];
+            
+            level.obstacles.push({
+                x: platform.x + platform.width/2 - 10,
                 y: platform.y - 20,
                 width: 20,
                 height: 20,
                 speedX: difficulty === 'medium' ? 0.5 : 0.8,
-                startX: platform.x + platform.width / 2,
+                startX: platform.x + platform.width/2 - 10,
                 range: platform.width * 0.6
             });
         }
     }
     
-    // Add powerups
+    // Add power-ups based on difficulty
+    const powerUpCount = difficulty === 'easy' ? 2 : (difficulty === 'medium' ? 1 : Math.random() > 0.5 ? 1 : 0);
     const powerUpTypes = ['SPEED_BOOST', 'EXTRA_LIFE', 'INVINCIBILITY'];
-    if (level.platforms.length > 2) {
-        const powerUpPlatform = level.platforms[Math.floor(level.platforms.length / 2)];
-        level.powerUps.push({
-            x: powerUpPlatform.x + powerUpPlatform.width / 2 - 15,
-            y: powerUpPlatform.y - 35,
-            width: 30,
-            height: 30,
-            type: powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)],
-            collected: false,
-            pulseRate: 0.008,
-            pulseTime: 0
-        });
+    
+    if (powerUpCount > 0 && level.platforms.length > 3) {
+        // Get platforms to place power-ups on (not first or last)
+        const powerUpPlatforms = level.platforms.filter((p, idx) => 
+            idx > 0 && idx < level.platforms.length - 1 && p.y < groundY);
+        
+        shuffleArray(powerUpPlatforms);
+        
+        for (let i = 0; i < Math.min(powerUpCount, powerUpPlatforms.length); i++) {
+            const platform = powerUpPlatforms[i];
+            const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            
+            level.powerUps.push({
+                x: platform.x + platform.width/2 - 15,
+                y: platform.y - 35,
+                width: 30,
+                height: 30,
+                type: type,
+                collected: false,
+                pulseRate: 0.008 + (Math.random() * 0.004),
+                pulseTime: 0
+            });
+        }
     }
     
-    // Set outlet on the last platform
+    // Place outlet on the last platform
     if (level.platforms.length > 1) {
         const lastPlatform = level.platforms[level.platforms.length - 1];
         level.outlet = {
-            x: lastPlatform.x + lastPlatform.width / 2 - 20,
+            x: lastPlatform.x + lastPlatform.width/2 - 20,
             y: lastPlatform.y - 50,
             width: 40,
             height: 40
         };
     } else {
+        // Fallback if something went wrong
         level.outlet = { x: 700, y: 400, width: 40, height: 40 };
     }
     
     return level;
 }
 
+// Helper function to shuffle an array (for randomizing platform selection)
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
