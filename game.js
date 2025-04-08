@@ -205,76 +205,95 @@ const keys = {
 
 // Level configurations
 const levels = [
+    // Level 1 (Easy)
     {
         platforms: [
             { x: 0, y: 450, width: 800, height: 50 }, // Ground
-            { x: 200, y: 350, width: 100, height: 20 },
-            { x: 400, y: 300, width: 100, height: 20 },
-            { x: 600, y: 250, width: 100, height: 20 }
-        ],
-        obstacles: [
-            { x: 300, y: 430, width: 20, height: 20 },
-            { x: 500, y: 430, width: 20, height: 20 }
-        ],
-        coins: [
-            { x: 250, y: 320, width: 20, height: 20, collected: false },
-            { x: 450, y: 270, width: 20, height: 20, collected: false },
-            { x: 650, y: 220, width: 20, height: 20, collected: false }
-        ],
-        outlet: { x: 720, y: 410, width: 40, height: 40 },
-        powerUps: [] // Initialize powerUps array
-    },
-    {
-        platforms: [
-            { x: 0, y: 450, width: 800, height: 50 }, // Ground
-            { x: 150, y: 380, width: 80, height: 20 },
-            { x: 300, y: 330, width: 80, height: 20 },
-            { x: 450, y: 280, width: 80, height: 20 },
-            { x: 600, y: 230, width: 80, height: 20 }
-        ],
-        obstacles: [
-            { x: 250, y: 430, width: 20, height: 20 },
-            { x: 400, y: 430, width: 20, height: 20 },
-            { x: 550, y: 430, width: 20, height: 20 },
-            { x: 330, y: 310, width: 20, height: 20 }
-        ],
-        coins: [
-            { x: 180, y: 350, width: 20, height: 20, collected: false },
-            { x: 330, y: 300, width: 20, height: 20, collected: false },
-            { x: 480, y: 250, width: 20, height: 20, collected: false },
-            { x: 630, y: 200, width: 20, height: 20, collected: false }
-        ],
-        outlet: { x: 720, y: 410, width: 40, height: 40 },
-        powerUps: [] // Initialize powerUps array
-    },
-    {
-        platforms: [
-            { x: 0, y: 450, width: 800, height: 50 }, // Ground
-            { x: 100, y: 400, width: 60, height: 20 },
-            { x: 240, y: 350, width: 60, height: 20 },
-            { x: 380, y: 300, width: 60, height: 20 },
-            { x: 520, y: 250, width: 60, height: 20 },
-            { x: 660, y: 200, width: 60, height: 20 }
+            { x: 100, y: 370, width: 110, height: 20 },
+            { x: 280, y: 350, width: 100, height: 20 },
+            { x: 450, y: 320, width: 115, height: 20 },
+            { x: 620, y: 290, width: 100, height: 20 }
         ],
         obstacles: [
             { x: 200, y: 430, width: 20, height: 20 },
-            { x: 340, y: 430, width: 20, height: 20 },
-            { x: 480, y: 430, width: 20, height: 20 },
-            { x: 620, y: 430, width: 20, height: 20 },
-            { x: 300, y: 330, width: 20, height: 20 },
-            { x: 440, y: 280, width: 20, height: 20 }
+            { x: 350, y: 430, width: 20, height: 20 },
+            { x: 530, y: 430, width: 20, height: 20 }
         ],
         coins: [
-            { x: 130, y: 370, width: 20, height: 20, collected: false },
-            { x: 270, y: 320, width: 20, height: 20, collected: false },
-            { x: 410, y: 270, width: 20, height: 20, collected: false },
-            { x: 550, y: 220, width: 20, height: 20, collected: false },
-            { x: 690, y: 170, width: 20, height: 20, collected: false }
+            { x: 140, y: 340, width: 20, height: 20, collected: false },
+            { x: 320, y: 320, width: 20, height: 20, collected: false },
+            { x: 490, y: 290, width: 20, height: 20, collected: false },
+            { x: 650, y: 260, width: 20, height: 20, collected: false }
         ],
-        outlet: { x: 720, y: 160, width: 40, height: 40 },
-        powerUps: [] // Initialize powerUps array
+        outlet: { x: 670, y: 240, width: 40, height: 40 },
+        powerUps: [
+            {
+                x: 485, y: 285, width: 30, height: 30, type: 'SPEED_BOOST',
+                collected: false, pulseRate: 0.008, pulseTime: 0
+            }
+        ]
+    },
+    // Level 2 (Medium)
+    {
+        platforms: [
+            { x: 0, y: 450, width: 800, height: 50 }, // Ground
+            { x: 120, y: 370, width: 90, height: 20 },
+            { x: 280, y: 340, width: 80, height: 20 },
+            { x: 440, y: 310, width: 80, height: 20 },
+            { x: 600, y: 260, width: 90, height: 20 }
+        ],
+        obstacles: [
+            { x: 200, y: 430, width: 20, height: 20 },
+            { x: 360, y: 430, width: 20, height: 20 },
+            { x: 520, y: 430, width: 20, height: 20 },
+            { x: 310, y: 320, width: 20, height: 20, speedX: 0.4, startX: 310, range: 50 }
+        ],
+        coins: [
+            { x: 160, y: 340, width: 20, height: 20, collected: false },
+            { x: 315, y: 310, width: 20, height: 20, collected: false },
+            { x: 475, y: 280, width: 20, height: 20, collected: false },
+            { x: 635, y: 230, width: 20, height: 20, collected: false }
+        ],
+        outlet: { x: 650, y: 210, width: 40, height: 40 },
+        powerUps: [
+            {
+                x: 325, y: 305, width: 30, height: 30, type: 'INVINCIBILITY',
+                collected: false, pulseRate: 0.01, pulseTime: 0
+            }
+        ]
+    },
+    // Level 3 (Hard)
+    {
+        platforms: [
+            { x: 0, y: 450, width: 800, height: 50 }, // Ground
+            { x: 120, y: 390, width: 70, height: 20 },
+            { x: 260, y: 330, width: 65, height: 20 },
+            { x: 400, y: 270, width: 60, height: 20 },
+            { x: 540, y: 220, width: 75, height: 20 }
+        ],
+        obstacles: [
+            { x: 190, y: 430, width: 20, height: 20 },
+            { x: 330, y: 430, width: 20, height: 20 },
+            { x: 470, y: 430, width: 20, height: 20 },
+            { x: 290, y: 310, width: 20, height: 20, speedX: 0.7, startX: 290, range: 40 },
+            { x: 430, y: 250, width: 20, height: 20, speedX: 0.7, startX: 430, range: 35 }
+        ],
+        coins: [
+            { x: 145, y: 360, width: 20, height: 20, collected: false },
+            { x: 285, y: 300, width: 20, height: 20, collected: false },
+            { x: 425, y: 240, width: 20, height: 20, collected: false },
+            { x: 575, y: 190, width: 20, height: 20, collected: false }
+        ],
+        outlet: { x: 575, y: 170, width: 40, height: 40 },
+        powerUps: [
+            {
+                x: 285, y: 295, width: 30, height: 30, type: 'EXTRA_LIFE',
+                collected: false, pulseRate: 0.012, pulseTime: 0
+            }
+        ]
     }
 ];
+
 
 // Update the window.onload function to initialize physics
 window.onload = function() {
