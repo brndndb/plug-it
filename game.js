@@ -987,7 +987,7 @@ function showTutorial() {
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
+        background-color: rgba(0, 0, 0, 0.8);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1011,7 +1011,7 @@ function showTutorial() {
     
     const tutorialText = document.createElement('p');
     tutorialText.id = 'tutorialText';
-    tutorialText.textContent = 'You are a plug on a mission to reach the outlet! Use arrow keys to move and space to jump.';
+    tutorialText.innerHTML = 'You are a plug on a mission to reach the outlet! Use arrow keys to move and space to jump.';
     
     const nextBtn = document.createElement('button');
     nextBtn.className = 'button';
@@ -1034,16 +1034,16 @@ function advanceTutorial() {
     
     switch(tutorialStep) {
         case 1:
-            tutorialText.innerHTML = 'Collect coins for points!<br><img src="https://via.placeholder.com/50" alt="Coin icon">';
+            tutorialText.innerHTML = 'Collect coins for points!<br><div class="tutorial-icon">🪙</div>';
             break;
         case 2:
-            tutorialText.innerHTML = 'Avoid obstacles or you\'ll lose a life!<br><img src="https://via.placeholder.com/50" alt="Obstacle icon">';
+            tutorialText.innerHTML = 'Avoid obstacles or you\'ll lose a life!<br><div class="tutorial-icon">⚠️</div>';
             break;
         case 3:
-            tutorialText.innerHTML = 'Find power-ups for special abilities!<br><img src="https://via.placeholder.com/50" alt="Power-up icon">';
+            tutorialText.innerHTML = 'Find power-ups for special abilities!<br><div class="tutorial-icon">⭐</div>';
             break;
         case 4:
-            tutorialText.innerHTML = 'Reach the outlet at the end of each level to progress!<br><img src="https://via.placeholder.com/50" alt="Outlet icon">';
+            tutorialText.innerHTML = 'Reach the outlet at the end of each level to progress!<br><div class="tutorial-icon">🔌</div>';
             break;
         case 5:
             tutorialText.innerHTML = 'Ready to play?';
