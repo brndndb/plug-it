@@ -809,6 +809,9 @@ function applyDifficultySettings() {
             }
         });
     }
+
+    // In the applyDifficultySettings function, at the end
+    applyRenderingFixes();
     
     // Update UI
     document.getElementById('lives').textContent = game.lives;
@@ -1123,6 +1126,9 @@ function loadLevel(levelNum) {
     
     // Start level timer
     startLevelTimer();
+
+    // In the loadLevel function, before starting the game loop
+    prepareLevel(levelNum);
     
     // Start tracking if player loses lives
     game.levelStartLives = game.lives;
