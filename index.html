@@ -39,7 +39,7 @@
             border-bottom-left-radius: 5px;
             border-bottom-right-radius: 5px;
         }
-        .menu-screen {
+       .menu-screen {
             position: absolute;
             top: 0;
             left: 0;
@@ -50,8 +50,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Changed from center to flex-start */
+            padding-top: 50px; /* Add padding at the top */
             transition: all 0.3s ease;
+            text-align: center;
+            overflow-y: auto; /* Allow scrolling if needed */
         }
         .menu-screen h1 {
             margin-bottom: 20px;
@@ -181,15 +184,18 @@
             width: 90%;
         }
         
+        /* Fixed title style */
         .game-title {
-            font-family: 'Arial Black', sans-serif;
-            font-size: 3em;
-            background: linear-gradient(to right, #FFD700, #FFA500);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            position: relative;
+            font-size: 42px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            margin-top: 30px; /* This is crucial - pushes the title down */
             margin-bottom: 30px;
-            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            padding-top: 20px; /* Additional padding at the top */
+            max-width: 90%;
+            text-align: center;
         }
         
         .game-controls {
@@ -198,6 +204,37 @@
             border-radius: 10px;
             margin: 20px 0;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+        }
+        
+        .game-controls p {
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .control-icon {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            background-color: #333;
+            border-radius: 5px;
+            margin-right: 10px;
+            font-weight: bold;
+            color: #FFF;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .pause-icon {
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .save-icon {
+            font-size: 14px;
         }
         
         @keyframes slide-in {
@@ -244,9 +281,18 @@
                 <button id="hardBtn" class="button">Hard</button>
             </div>
             <div class="game-controls">
-                <p>Use arrow keys to move and space to jump</p>
-                <p>Press ESC to pause the game</p>
-                <p>CTRL+S to save your progress</p>
+                <p>
+                    <span class="control-icon">←→</span>
+                    Use arrow keys to move and space to jump
+                </p>
+                <p>
+                    <span class="control-icon pause-icon">||</span>
+                    Press ESC to pause the game
+                </p>
+                <p>
+                    <span class="control-icon save-icon">S</span>
+                    CTRL+S to save your progress
+                </p>
             </div>
         </div>
         
