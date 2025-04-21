@@ -1471,11 +1471,9 @@ function playerHit() {
 
 // Complete level function
 function completeLevel() {
-    // Stop the game
     setGameRunning(false);
-
-    // Check if the sound is ready before playing
-    if (sounds.levelComplete.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+    
+    if (sounds.levelComplete.readyState >= 2) {
         sounds.levelComplete.currentTime = 0;
         sounds.levelComplete.play().catch(error => {
             console.error('Error playing level complete sound:', error);
@@ -1483,51 +1481,35 @@ function completeLevel() {
     } else {
         console.log('Level complete sound not ready');
     }
-    // Play sound
-    sounds.levelComplete.currentTime = 0;
-    sounds.levelComplete.play();
     
-    // Calculate time bonus
     const timeBonus = Math.max(0, 30000 - levelCurrentTime);
     const timeBonusPoints = Math.floor(timeBonus / 100);
-    
-    // Add bonus points
     game.score += timeBonusPoints;
     
-    // Check for achievements
-    
-    // Speed Runner achievement
     if (levelCurrentTime < 30000 && !achievements.SPEED_RUNNER.unlocked) {
         achievements.SPEED_RUNNER.unlocked = true;
         showAchievementNotification(achievements.SPEED_RUNNER);
         saveAchievements();
     }
     
-    // Survivor achievement
     if (game.lives === game.levelStartLives && !achievements.SURVIVOR.unlocked) {
         achievements.SURVIVOR.unlocked = true;
         showAchievementNotification(achievements.SURVIVOR);
         saveAchievements();
     }
     
-    // Update level complete screen
     document.getElementById('levelScore').textContent = `Score: ${game.score} (Time Bonus: ${timeBonusPoints})`;
     
-    // Increment level
     game.level++;
     
-    // Check if there are more levels
     if (game.level > levels.length) {
-        // Game completed
         document.getElementById('nextLevelBtn').textContent = "Restart Game";
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
             game.level = 1;
-            resetGameControls(); // Make sure to reset controls here
             showStartScreen();
         };
     } else {
-        // More levels to play
         document.getElementById('nextLevelBtn').textContent = "Next Level";
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
@@ -1535,7 +1517,7 @@ function completeLevel() {
         };
     }
     
-    // Show level complete screen
+    // Ensure the level complete screen is shown for all difficulties
     document.getElementById('levelComplete').style.display = 'flex';
 }
 
@@ -2521,6 +2503,7 @@ function designLevel(difficulty) {
     const levelWidth = 800;
     const groundY = 450;
     
+    
     // Player jump metrics (these determine platform placement)
     const playerJumpHeight = difficulty === 'easy' ? 120 : (difficulty === 'medium' ? 110 : 100);
     const playerJumpDistance = difficulty === 'easy' ? 180 : (difficulty === 'medium' ? 160 : 140);
@@ -2720,6 +2703,10 @@ function updateLevelData() {
 function generateDynamicLevel(levelNum) {
     const difficulty = game.difficulty;
     const groundY = 450;
+    const lastPlatform = level.platforms[level.platforms.length - 1];
+    const groundWidth = Math.max(800, lastPlatform.x + lastPlatform.width + 100); // Extend 100px beyond the last platform
+    level.platforms[0] = { x: 0, y: groundY, width: groundWidth, height: 50 };
+        
     
     const basePlatformCount = 4 + Math.floor(levelNum / 2);
     const platformCount = difficulty === 'easy' ? basePlatformCount + 2 :
@@ -2761,13 +2748,20 @@ function generateDynamicLevel(levelNum) {
         });
         
         if (Math.random() < 0.8) {
-            level.coins.push({
-                x: lastX + platformWidth/2 - 10,
-                y: lastY - 30,
-                width: 20,
-                height: 20,
-                collected: false
-            });
+            const coinX = lastX + platformWidth/2 - 10;
+            const coinY = lastY - 30;
+            // Check if this position is too close to existing items
+            let tooClose = level.coins.some(c => Math.abs(c.x - coinX) < 40) ||
+                          level.powerUps.some(p => Math.abs(p.x - coinX) < 40);
+            if (!tooClose) {
+                level.coins.push({
+                    x: coinX,
+                    y: coinY,
+                    width: 20,
+                    height: 20,
+                    collected: false
+                });
+            }
         }
         
         const jumpVariation = Math.random() * 20 - 10;
@@ -2814,17 +2808,23 @@ function generateDynamicLevel(levelNum) {
     shuffleArray(platformsForPowerUps);
     for (let i = 0; i < Math.min(powerUpCount, platformsForPowerUps.length); i++) {
         const p = platformsForPowerUps[i];
-        const type = Object.keys(powerUpTypes)[Math.floor(Math.random() * 3)];
-        level.powerUps.push({
-            x: p.x + p.width/2 - 15,
-            y: p.y - 35,
-            width: 30,
-            height: 30,
-            type,
-            collected: false,
-            pulseRate: 0.008,
-            pulseTime: 0
-        });
+        const powerUpX = p.x + p.width/2 - 15;
+        const powerUpY = p.y - 35;
+        let tooClose = level.coins.some(c => Math.abs(c.x - powerUpX) < 40) ||
+                      level.powerUps.some(pu => Math.abs(pu.x - powerUpX) < 40);
+        if (!tooClose) {
+            const type = Object.keys(powerUpTypes)[Math.floor(Math.random() * 3)];
+            level.powerUps.push({
+                x: powerUpX,
+                y: powerUpY,
+                width: 30,
+                height: 30,
+                type,
+                collected: false,
+                pulseRate: 0.008,
+                pulseTime: 0
+            });
+        }
     }
     
     const lastPlatform = level.platforms[level.platforms.length - 1];
@@ -2834,6 +2834,11 @@ function generateDynamicLevel(levelNum) {
         width: 40,
         height: 40
     };
+
+    level.coins = level.coins.filter(coin => {
+        const distanceToOutlet = Math.abs(coin.x - level.outlet.x);
+        return distanceToOutlet > 50; // Ensure coin is at least 50px away from outlet
+    });
     
     return level;
 }
