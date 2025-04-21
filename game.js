@@ -354,6 +354,16 @@ window.onload = function() {
     
     // Set up direct event handlers for other game buttons
     setupAllGameButtons();
+
+    function enhanceWindowOnload() {
+        // Add this line to the existing window.onload function
+        setupGameOverButtons();
+        
+        // Also ensure the player starts with the correct number of lives based on difficulty
+        applyDifficultySettings();
+    }
+    
+    
 };
 
 
@@ -666,6 +676,29 @@ function saveScore() {
     // Show high scores
     document.getElementById('gameOver').style.display = 'none';
     showHighScores();
+}
+
+function setupGameOverButtons() {
+    // Get the buttons
+    const saveScoreBtn = document.getElementById('saveScoreBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    
+    // Clone and replace to remove old listeners
+    const newSaveScoreBtn = saveScoreBtn.cloneNode(true);
+    const newRestartBtn = restartBtn.cloneNode(true);
+    
+    saveScoreBtn.parentNode.replaceChild(newSaveScoreBtn, saveScoreBtn);
+    restartBtn.parentNode.replaceChild(newRestartBtn, restartBtn);
+    
+    // Add new listeners
+    newSaveScoreBtn.addEventListener('click', function() {
+        saveScore();
+    });
+    
+    newRestartBtn.addEventListener('click', function() {
+        document.getElementById('gameOver').style.display = 'none';
+        showStartScreen();
+    });
 }
 
 // Make sure showHighScores function exists
@@ -1522,7 +1555,7 @@ function gameOver() {
     // Reset game controls to ensure buttons work after game over
     resetGameControls();
     
-    // Show game over screen
+    // Show game over screen (make sure this happens regardless of difficulty)
     document.getElementById('gameOver').style.display = 'flex';
 }
 
@@ -2697,9 +2730,9 @@ function generateDynamicLevel(levelNum) {
     const difficulty = game.difficulty;
     const groundY = 450;
     
-    // Create a new level object instead of referencing an undefined 'level'
+    // Create a new level object
     const level = {
-        platforms: [{ x: 0, y: groundY, width: 800, height: 50 }],
+        platforms: [],  // Start with empty platforms array - we'll add ground later
         obstacles: [],
         coins: [],
         powerUps: [],
@@ -2728,6 +2761,7 @@ function generateDynamicLevel(levelNum) {
     let lastX = 80;
     let lastY = groundY - 80;
     
+    // Generate all platforms first (except ground)
     for (let i = 0; i < platformCount; i++) {
         const platformWidth = 60 + Math.random() * 30;
         level.platforms.push({
@@ -2763,6 +2797,34 @@ function generateDynamicLevel(levelNum) {
         }
     }
     
+    // Position the outlet on the last platform
+    const lastPlatform = level.platforms[level.platforms.length - 1];
+    level.outlet = {
+        x: lastPlatform.x + lastPlatform.width/2 - 20,
+        y: lastPlatform.y - 50,
+        width: 40,
+        height: 40
+    };
+    
+    // Now add the ground platform AFTER calculating the rightmost element
+    // Find the rightmost element (platform or outlet)
+    let rightmostX = 0;
+    
+    // Check platforms
+    level.platforms.forEach(platform => {
+        const platformRight = platform.x + platform.width;
+        if (platformRight > rightmostX) rightmostX = platformRight;
+    });
+    
+    // Check outlet
+    const outletRight = level.outlet.x + level.outlet.width;
+    if (outletRight > rightmostX) rightmostX = outletRight;
+    
+    // Create the ground platform with sufficient width
+    const groundWidth = Math.max(800, rightmostX + 200); // Add extra safety margin
+    level.platforms.unshift({ x: 0, y: groundY, width: groundWidth, height: 50 });
+    
+    // Add obstacles after knowing where all platforms are
     for (let i = 0; i < obstacleCount; i++) {
         let x = 100 + Math.random() * (700 - obstacleCount * 50);
         let valid = true;
@@ -2777,6 +2839,7 @@ function generateDynamicLevel(levelNum) {
         }
     }
     
+    // Add the rest of the elements (moving obstacles, power-ups, etc.)
     if (movingObstacleCount > 0) {
         const platforms = level.platforms.slice(2, -1);
         shuffleArray(platforms);
@@ -2816,14 +2879,6 @@ function generateDynamicLevel(levelNum) {
             });
         }
     }
-    
-    const lastPlatform = level.platforms[level.platforms.length - 1];
-    level.outlet = {
-        x: lastPlatform.x + lastPlatform.width/2 - 20,
-        y: lastPlatform.y - 50,
-        width: 40,
-        height: 40
-    };
 
     level.coins = level.coins.filter(coin => {
         const distanceToOutlet = Math.abs(coin.x - level.outlet.x);
