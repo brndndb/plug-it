@@ -964,7 +964,7 @@ function setupEventListeners() {
     document.getElementById('saveScoreBtn').addEventListener('click', saveScore);
     document.getElementById('restartBtn').addEventListener('click', function() {
         document.getElementById('gameOver').style.display = 'none';
-        showStartScreen();
+        showStartScreen();  // This now includes resetGameControls
     });
 
     // High scores button
@@ -1167,6 +1167,9 @@ function updateStartScreenWithAchievements() {
 function showStartScreen() {
     document.getElementById('startScreen').style.display = 'flex';
     game.isRunning = false;
+
+    // Reset game controls to ensure buttons work after game over
+    resetGameControls();
     
     // Dispatch game state change event
     const event = new CustomEvent('gameStateChange', { 
@@ -2980,3 +2983,41 @@ function shuffleArray(array) {
     }
     return array;
 }
+
+function resetGameControls() {
+    // Clear existing event listeners by cloning and replacing elements
+    const easyBtn = document.getElementById('easyBtn');
+    const mediumBtn = document.getElementById('mediumBtn');
+    const hardBtn = document.getElementById('hardBtn');
+    
+    if (easyBtn && mediumBtn && hardBtn) {
+        // Clone each button to remove existing event listeners
+        const newEasyBtn = easyBtn.cloneNode(true);
+        const newMediumBtn = mediumBtn.cloneNode(true);
+        const newHardBtn = hardBtn.cloneNode(true);
+        
+        // Replace original buttons with clones
+        easyBtn.parentNode.replaceChild(newEasyBtn, easyBtn);
+        mediumBtn.parentNode.replaceChild(newMediumBtn, mediumBtn);
+        hardBtn.parentNode.replaceChild(newHardBtn, hardBtn);
+        
+        // Add new event listeners
+        newEasyBtn.addEventListener('click', function() {
+            console.log('Easy button clicked');
+            startGame('easy');
+        });
+        
+        newMediumBtn.addEventListener('click', function() {
+            console.log('Medium button clicked');
+            startGame('medium');
+        });
+        
+        newHardBtn.addEventListener('click', function() {
+            console.log('Hard button clicked');
+            startGame('hard');
+        });
+    } else {
+        console.error('Could not find difficulty buttons');
+    }
+}
+
