@@ -307,8 +307,8 @@ window.onload = function() {
     loadHighScores();
     loadAchievements();
     
-    // Set up event listeners
-    setupEventListeners();
+    // Set up event listeners - we'll handle these directly in the HTML
+    //setupEventListeners(); 
     
     // Update start screen
     updateStartScreen();
@@ -348,10 +348,14 @@ window.onload = function() {
     // Add window resize handler for responsive canvas
     window.addEventListener('resize', adjustCanvasSize);
     adjustCanvasSize();
-
+    
     // IMPORTANT: Call this function to initialize dynamic level generation
     initializeDynamicLevels();
+    
+    // Set up direct event handlers for other game buttons
+    setupAllGameButtons();
 };
+
 
 function initializeDynamicLevels() {
     console.log("Initializing dynamic level generation");
@@ -1181,6 +1185,8 @@ function showStartScreen() {
 // Update startGame to use difficulty settings
 function startGame(difficulty) {
     console.log('Starting game with difficulty:', difficulty);
+    
+    // Reset game state
     game.difficulty = difficulty;
     game.level = 1;
     game.score = 0;
@@ -1672,6 +1678,7 @@ function completeLevel() {
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
             game.level = 1;
+            resetGameControls(); // Make sure to reset controls here
             showStartScreen();
         };
     } else {
@@ -1687,6 +1694,7 @@ function completeLevel() {
     document.getElementById('levelComplete').style.display = 'flex';
 }
 
+
 // Game over function
 function gameOver() {
     // Stop the game
@@ -1694,6 +1702,9 @@ function gameOver() {
     
     // Update game over screen
     document.getElementById('finalScore').textContent = `Final Score: ${game.score}`;
+
+    // Reset game controls to ensure buttons work after game over
+    resetGameControls();
     
     // Show game over screen
     document.getElementById('gameOver').style.display = 'flex';
@@ -3021,3 +3032,52 @@ function resetGameControls() {
     }
 }
 
+// New function to set up all game buttons directly
+function setupAllGameButtons() {
+    // Level complete button
+    document.getElementById('nextLevelBtn').addEventListener('click', function() {
+        document.getElementById('levelComplete').style.display = 'none';
+        loadLevel(game.level);
+    });
+
+    // Game over buttons
+    document.getElementById('saveScoreBtn').addEventListener('click', saveScore);
+    document.getElementById('restartBtn').addEventListener('click', function() {
+        document.getElementById('gameOver').style.display = 'none';
+        showStartScreen();
+    });
+
+    // High scores button
+    document.getElementById('backBtn').addEventListener('click', function() {
+        document.getElementById('highScores').style.display = 'none';
+        showStartScreen();
+    });
+    
+    // Set up keyboard controls
+    document.addEventListener('keydown', function(e) {
+        if (e.code === 'ArrowRight') keys.ArrowRight = true;
+        if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+        if (e.code === 'ArrowUp' || e.code === 'Space') {
+            keys.Space = true;
+            // Prevent spacebar from scrolling the page
+            if (e.code === 'Space') e.preventDefault();
+        }
+        
+        // Add pause key
+        if (e.code === 'Escape' && game.isRunning) {
+            togglePause();
+        }
+        
+        // Add save keyboard shortcut
+        if (e.code === 'KeyS' && e.ctrlKey && game.isRunning) {
+            e.preventDefault();
+            saveGameState();
+        }
+    });
+
+    document.addEventListener('keyup', function(e) {
+        if (e.code === 'ArrowRight') keys.ArrowRight = false;
+        if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+        if (e.code === 'ArrowUp' || e.code === 'Space') keys.Space = false;
+    });
+}
