@@ -1324,6 +1324,7 @@ function setGameRunning(isRunning) {
     }
 }
 
+// Improved collision detection function
 function collides(a, b) {
     return a.x < b.x + b.width &&
            a.x + a.width > b.x &&
@@ -1368,44 +1369,91 @@ function update() {
         createJumpParticles(player.x + player.width/2, player.y + player.height);
     }
 
-    // Update player position
+    // Store original position for collision detection
+    const originalX = player.x;
+    const originalY = player.y;
+    
+    // Update player position for X axis first
     player.x += player.speedX;
-    player.y += player.speedY;
     
-    
-    // Boundary checking
+    // Boundary checking for X axis
     if (player.x < 0) player.x = 0;
-    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+    if (player.x + player.width > levelWidth) player.x = levelWidth - player.width;
     
     const currentLevel = levels[game.level - 1];
     
-    // Check platform collisions
+    // Check X-axis platform collisions first
+    currentLevel.platforms.forEach(platform => {
+        if (collides(player, platform)) {
+            // Hit from left
+            if (player.speedX > 0 && originalX + player.width <= platform.x + 1) {
+                player.x = platform.x - player.width;
+            }
+            // Hit from right
+            else if (player.speedX < 0 && originalX >= platform.x + platform.width - 1) {
+                player.x = platform.x + platform.width;
+            }
+        }
+    });
+    
+    // Now update Y position separately
+    player.y += player.speedY;
+    
+    // Check Y-axis platform collisions
     let onGround = false;
     currentLevel.platforms.forEach(platform => {
         if (collides(player, platform)) {
             // Coming from above (landing)
-            if (player.speedY > 0 && player.y + player.height - player.speedY <= platform.y) {
+            if (player.speedY > 0 && originalY + player.height <= platform.y + (player.speedY + 1)) {
                 player.y = platform.y - player.height;
                 player.speedY = 0;
                 player.isJumping = false;
                 onGround = true;
             }
             // Hit from below
-            else if (player.speedY < 0 && player.y - player.speedY >= platform.y + platform.height) {
+            else if (player.speedY < 0 && originalY >= platform.y + platform.height + (player.speedY - 1)) {
                 player.y = platform.y + platform.height;
                 player.speedY = 0;
-            }
-            // Hit from left
-            else if (player.speedX > 0 && player.x + player.width - player.speedX <= platform.x) {
-                player.x = platform.x - player.width;
-            }
-            // Hit from right
-            else if (player.speedX < 0 && player.x - player.speedX >= platform.x + platform.width) {
-                player.x = platform.x + platform.width;
             }
         }
     });
     
+    // Add this failsafe: if player is moving too fast, check intermediate positions
+    if (!onGround && Math.abs(player.speedY) > 10) {
+        // Check for high-speed collision by interpolating positions
+        const steps = Math.ceil(Math.abs(player.speedY) / 5);
+        const stepY = player.speedY / steps;
+        
+        for (let i = 1; i < steps; i++) {
+            const testY = originalY + stepY * i;
+            const testPlayer = {
+                x: player.x,
+                y: testY,
+                width: player.width,
+                height: player.height
+            };
+            
+            for (const platform of currentLevel.platforms) {
+                if (collides(testPlayer, platform)) {
+                    // We would have collided at this intermediate position
+                    if (player.speedY > 0) {
+                        player.y = platform.y - player.height;
+                        player.speedY = 0;
+                        player.isJumping = false;
+                        onGround = true;
+                    } else {
+                        player.y = platform.y + platform.height;
+                        player.speedY = 0;
+                    }
+                    break;
+                }
+            }
+            
+            if (onGround) break;
+        }
+    }
+    
+    // The rest of the update function remains the same
     // Check for coin collisions
     currentLevel.coins.forEach(coin => {
         if (!coin.collected && collides(player, coin)) {
@@ -1502,14 +1550,14 @@ function update() {
         player.y = 400;
     }
     
-  // Update particles
-  updateParticles();
-  
-  // Update floating messages
-  updateFloatingMessages();
-
-  // Fix the function name - use capital C
-  updateCamera();
+    // Update particles
+    updateParticles();
+    
+    // Update floating messages
+    updateFloatingMessages();
+    
+    // Update camera
+    updateCamera();
 }
 
 // Create jump particles for better feedback
