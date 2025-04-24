@@ -276,9 +276,9 @@
         <div id="startScreen" class="menu-screen">
             <h1 class="game-title">Power Plug Adventure</h1>
             <div class="difficulty-buttons">
-                <button id="easyBtn" class="button">Easy</button>
-                <button id="mediumBtn" class="button">Medium</button>
-                <button id="hardBtn" class="button">Hard</button>
+                <button id="easyBtn" class="button" onclick="startGame('easy')">Easy</button>
+                <button id="mediumBtn" class="button" onclick="startGame('medium')">Medium</button>
+                <button id="hardBtn" class="button" onclick="startGame('hard')">Hard</button>
             </div>
             <div class="game-controls">
                 <p>
@@ -331,33 +331,5 @@
     
     <script src="game.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Direct event handlers for difficulty buttons
-            const easyBtn = document.getElementById('easyBtn');
-            const mediumBtn = document.getElementById('mediumBtn');
-            const hardBtn = document.getElementById('hardBtn');
-            
-            // Make sure we found the buttons
-            if (easyBtn && mediumBtn && hardBtn) {
-                easyBtn.onclick = function() { 
-                    console.log('Easy button clicked');
-                    startGame('easy'); 
-                };
-                
-                mediumBtn.onclick = function() { 
-                    console.log('Medium button clicked');
-                    startGame('medium'); 
-                };
-                
-                hardBtn.onclick = function() { 
-                    console.log('Hard button clicked');
-                    startGame('hard'); 
-                };
-            } else {
-                console.error('Could not find difficulty buttons');
-            }
-        });
-    </script>
 </body>
 </html>

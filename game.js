@@ -307,9 +307,6 @@ window.onload = function() {
     loadHighScores();
     loadAchievements();
     
-    // Set up event listeners
-    setupEventListeners();
-    
     // Update start screen
     updateStartScreen();
     updateStartScreenWithSaveLoad();
@@ -336,6 +333,9 @@ window.onload = function() {
     // Initialize physics properties
     initializePhysics();
     
+    // Initialize player animations - ADDED THIS LINE
+    initializeAnimations();
+    
     // Initialize player jump buffer
     player.jumpBufferTimer = 0;
     
@@ -348,19 +348,69 @@ window.onload = function() {
     // Add window resize handler for responsive canvas
     window.addEventListener('resize', adjustCanvasSize);
     adjustCanvasSize();
-
+    
     // IMPORTANT: Call this function to initialize dynamic level generation
     initializeDynamicLevels();
+    
+    // Set up direct event handlers for other game buttons
+    setupAllGameButtons();
+  
+    // Make sure to call setupGameOverButtons to initialize the buttons
+    setupGameOverButtons();
+
+    enhanceWindowOnload();
+
+    function enhanceWindowOnload() {
+        console.log("Enhanced window.onload running");
+        
+        // Set up game over buttons immediately
+        setupGameOverButtons();
+        
+        // Make sure difficulty settings are applied
+        applyDifficultySettings();
+        
+        // Reset game controls to ensure start buttons work
+        resetGameControls();
+        
+        // Add extra event listeners for debugging
+        document.addEventListener('gameStateChange', function(e) {
+            console.log("Game state changed:", e.detail);
+        });
+        
+        // Initialize game over screen
+        const gameOverScreen = document.getElementById('gameOver');
+        if (gameOverScreen) {
+            gameOverScreen.style.zIndex = '1000';
+            console.log("Game over screen initialized");
+        }
+        
+        // Initialize difficulty buttons
+        // This is critical since they might not have been properly set up
+        const easyBtn = document.getElementById('easyBtn');
+        const mediumBtn = document.getElementById('mediumBtn');
+        const hardBtn = document.getElementById('hardBtn');
+        
+        if (easyBtn && mediumBtn && hardBtn) {
+            // Add direct click handlers
+            easyBtn.onclick = function() { startGame('easy'); };
+            mediumBtn.onclick = function() { startGame('medium'); };
+            hardBtn.onclick = function() { startGame('hard'); };
+            console.log("Difficulty buttons initialized directly");
+        }
+    }
+
+    
 };
+
+
 
 function initializeDynamicLevels() {
     console.log("Initializing dynamic level generation");
-    // Ensure the game always uses generateDynamicLevel when loading levels
     
-    // Store the original loadLevel function for reference
-    const originalLoadLevel = loadLevel;
+    // Instead of overriding, let's create a new function for dynamic level loading
+    window.originalLoadLevel = loadLevel; // Save reference to original
     
-    // Override loadLevel to use our dynamic generation
+    // Replace with our new implementation
     loadLevel = function(levelNum) {
         console.log("Loading dynamically generated level:", levelNum);
         
@@ -371,15 +421,16 @@ function initializeDynamicLevels() {
         player.speedY = 0;
         player.isJumping = false;
         
-        // Generate a new level or get an existing one
+        // Generate a new level
         let level;
+        
+        // Generate the level
+        level = generateDynamicLevel(levelNum);
+        
+        // Update the levels array
         if (levelNum <= levels.length) {
-            // Replace the existing level with a new one
-            levels[levelNum - 1] = generateDynamicLevel(levelNum);
-            level = levels[levelNum - 1];
+            levels[levelNum - 1] = level;
         } else {
-            // Create a new level and add it to the levels array
-            level = generateDynamicLevel(levelNum);
             levels.push(level);
         }
         
@@ -398,18 +449,6 @@ function initializeDynamicLevels() {
         
         // Set level width with some extra space
         levelWidth = Math.max(rightmostX + 200, canvas.width);
-        
-        // Reset level coins
-        level.coins.forEach(coin => {
-            coin.collected = false;
-        });
-        
-        // Reset power-ups if they exist
-        if (level.powerUps && level.powerUps.length > 0) {
-            level.powerUps.forEach(powerUp => {
-                powerUp.collected = false;
-            });
-        }
         
         // Start level timer
         startLevelTimer();
@@ -645,11 +684,22 @@ function saveAchievements() {
 
 // Save score function
 function saveScore() {
-    const playerName = document.getElementById('playerName').value.trim();
+    console.log("saveScore function called");
+    
+    // Get player name with proper validation
+    const playerNameInput = document.getElementById('playerName');
+    if (!playerNameInput) {
+        console.error("Could not find playerName input element");
+        return;
+    }
+    
+    const playerName = playerNameInput.value.trim();
     if (playerName === '') {
         alert('Please enter your name');
         return;
     }
+    
+    console.log(`Saving score for player: ${playerName}`);
     
     // Add score to high scores
     game.highScores.push({
@@ -670,9 +720,50 @@ function saveScore() {
     // Save to local storage
     localStorage.setItem('powerPlugScores', JSON.stringify(game.highScores));
     
-    // Show high scores
-    document.getElementById('gameOver').style.display = 'none';
+    // Switch to high scores screen
+    const gameOverScreen = document.getElementById('gameOver');
+    if (gameOverScreen) {
+        gameOverScreen.style.display = 'none';
+    } else {
+        console.error("Could not find gameOver element");
+    }
+    
     showHighScores();
+}
+
+function setupGameOverButtons() {
+    console.log("Setting up game over buttons");
+    
+    // Get references to the buttons
+    const saveScoreBtn = document.getElementById('saveScoreBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    
+    if (!saveScoreBtn || !restartBtn) {
+        console.error("Could not find game over buttons!");
+        return;
+    }
+    
+    // Create clones to remove old event listeners
+    const newSaveScoreBtn = saveScoreBtn.cloneNode(true);
+    const newRestartBtn = restartBtn.cloneNode(true);
+    
+    // Replace originals with clones
+    saveScoreBtn.parentNode.replaceChild(newSaveScoreBtn, saveScoreBtn);
+    restartBtn.parentNode.replaceChild(newRestartBtn, restartBtn);
+    
+    // Add new event listeners with debugging info
+    newSaveScoreBtn.addEventListener('click', function() {
+        console.log("Save score button clicked");
+        saveScore();
+    });
+    
+    newRestartBtn.addEventListener('click', function() {
+        console.log("Play again button clicked");
+        document.getElementById('gameOver').style.display = 'none';
+        showStartScreen();
+    });
+    
+    console.log("Game over buttons have been set up");
 }
 
 // Make sure showHighScores function exists
@@ -718,41 +809,32 @@ function applyDifficultySettings() {
         easy: {
             lives: 5,
             gravity: 0.4,
-            jumpPower: -10,          // Reduced jump power
-            playerSpeed: 2.5,        // Reduced from 4
-            obstacleSpeed: 0,
-            powerUpFrequency: 2.5,
-            extraPlatforms: 3,
-            playerColor: '#2ECC40',  // Green
+            jumpPower: -10,
+            playerSpeed: 2.5,
+            playerColor: '#2ECC40',
             coinValue: 150
         },
         medium: {
             lives: 3,
             gravity: 0.5,
-            jumpPower: -11,          // Reduced jump power
-            playerSpeed: 3,          // Reduced from 5
-            obstacleSpeed: 0.4,      // Slightly reduced
-            powerUpFrequency: 1.5,
-            extraPlatforms: 1,
-            playerColor: '#0074D9',  // Blue
+            jumpPower: -11,
+            playerSpeed: 3,
+            playerColor: '#0074D9',
             coinValue: 100
         },
         hard: {
             lives: 1,
             gravity: 0.6,
-            jumpPower: -12,          // Reduced jump power
-            playerSpeed: 3.5,        // Reduced from 6
-            obstacleSpeed: 0.7,      // Slightly reduced
-            powerUpFrequency: 1,
-            extraPlatforms: 0,
-            playerColor: '#FF4136',  // Red
+            jumpPower: -12,
+            playerSpeed: 3.5,
+            playerColor: '#FF4136',
             coinValue: 200
         }
     };
     
+    console.log("Applying difficulty settings for:", game.difficulty);
     const settings = difficultySettings[game.difficulty];
     
-    // Apply settings
     game.lives = settings.lives;
     game.gravity = settings.gravity;
     player.jumpPower = settings.jumpPower;
@@ -760,157 +842,13 @@ function applyDifficultySettings() {
     player.color = settings.playerColor;
     game.coinValue = settings.coinValue;
     
-    // Reset obstacles first
-    levels.forEach(level => {
-        level.obstacles.forEach(obstacle => {
-            delete obstacle.speedX;
-            delete obstacle.startX;
-            delete obstacle.range;
-        });
-    });
-    
-    // Make some obstacles move in medium and hard modes
-    if (game.difficulty !== 'easy') {
-        levels.forEach(level => {
-            level.obstacles.forEach((obstacle, index) => {
-                if (index % 2 === 0) { // Make some obstacles move
-                    obstacle.speedX = settings.obstacleSpeed;
-                    obstacle.startX = obstacle.x;
-                    obstacle.range = 100; // Range of movement
-                }
-            });
-        });
-    }
-    
-    // Add power-ups based on difficulty
-    levels.forEach(level => {
-        // Clear existing power-ups
-        level.powerUps = [];
-        
-        // Add power-ups based on difficulty
-        for (let i = 0; i < settings.powerUpFrequency; i++) {
-            // Make sure we have platforms to place power-ups on
-            if (level.platforms.length > 1) {
-                const platform = level.platforms[Math.floor(Math.random() * (level.platforms.length - 1)) + 1];
-                
-                const types = Object.keys(powerUpTypes);
-                const randomType = types[Math.floor(Math.random() * types.length)];
-                
-                level.powerUps.push({
-                    x: platform.x + platform.width/2 - 15,
-                    y: platform.y - 30,
-                    width: 30,
-                    height: 30,
-                    type: randomType,
-                    collected: false,
-                    pulseRate: 0.005 + (Math.random() * 0.01),
-                    pulseTime: 0
-                });
-            }
-        }
-    });
-    
-    // Store original platform configurations if not already stored
-    if (!window.originalLevels) {
-        window.originalLevels = JSON.parse(JSON.stringify(levels));
-    } else {
-        // Reset to original platforms before adding difficulty-specific ones
-        levels.forEach((level, levelIndex) => {
-            level.platforms = JSON.parse(JSON.stringify(window.originalLevels[levelIndex].platforms));
-        });
-    }
-    
-    // Add extra platforms for easier difficulties
-    if (settings.extraPlatforms > 0) {
-        levels.forEach(level => {
-            // Use smart platform placement instead of random locations
-            for (let i = 0; i < settings.extraPlatforms; i++) {
-                // Find gaps between existing platforms to place new platforms
-                let platforms = level.platforms.filter(p => p.y < 450); // Exclude ground
-                
-                // Sort platforms by x position to find gaps
-                platforms.sort((a, b) => a.x - b.x);
-                
-                // Find the largest horizontal gap
-                let maxGap = 0;
-                let gapX = 100;
-                let gapY = 350;
-                
-                // Check gaps between existing platforms
-                for (let j = 0; j < platforms.length - 1; j++) {
-                    const currentPlatform = platforms[j];
-                    const nextPlatform = platforms[j + 1];
-                    
-                    const gap = nextPlatform.x - (currentPlatform.x + currentPlatform.width);
-                    
-                    if (gap > maxGap && gap > 100) { // Minimum gap size to add a platform
-                        maxGap = gap;
-                        gapX = currentPlatform.x + currentPlatform.width + gap / 2 - 35; // Center in the gap
-                        
-                        // Choose y position that makes a reachable jump (between the two platforms)
-                        const avgY = (currentPlatform.y + nextPlatform.y) / 2;
-                        // Vary the height slightly for variety
-                        gapY = avgY + (Math.random() * 40 - 20);
-                        
-                        // Keep within reasonable jump height
-                        gapY = Math.max(200, Math.min(400, gapY));
-                    }
-                }
-                
-                // If we didn't find a good gap, find a vertical gap where a platform could help player reach higher
-                if (maxGap < 100) {
-                    // Look for places where platforms are stacked too high to reach with a normal jump
-                    for (let j = 0; j < platforms.length; j++) {
-                        for (let k = 0; k < platforms.length; k++) {
-                            const lowerPlatform = platforms[j];
-                            const upperPlatform = platforms[k];
-                            
-                            // Check if one platform is above another at a height that might be hard to reach
-                            if (upperPlatform.y < lowerPlatform.y && 
-                                Math.abs(upperPlatform.x - lowerPlatform.x) < 150 &&
-                                lowerPlatform.y - upperPlatform.y > 120) { // Too high to jump
-                                
-                                // Place a stepping platform in between
-                                gapX = (lowerPlatform.x + upperPlatform.x) / 2;
-                                gapY = lowerPlatform.y - 60; // A jumpable height above lower platform
-                            }
-                        }
-                    }
-                }
-                
-                // Final fallback - place platforms to help reach the outlet
-                if (maxGap < 100) {
-                    const outlet = level.outlet;
-                    const platformsNearOutlet = platforms.filter(p => 
-                        Math.abs(p.x - outlet.x) < 200 && p.y < outlet.y);
-                    
-                    if (platformsNearOutlet.length === 0 && outlet.y < 400) {
-                        // No platforms near the outlet, add one
-                        gapX = outlet.x - 80 - (i * 20); // Slightly offset for multiple platforms
-                        gapY = outlet.y + 40 + (i * 30);
-                    }
-                }
-                
-                // Add the new platform
-                level.platforms.push({
-                    x: gapX,
-                    y: gapY,
-                    width: 70,
-                    height: 20
-                });
-            }
-        });
-    }
-
-    // In the applyDifficultySettings function, at the end
-    applyRenderingFixes();
-    
     // Update UI
     document.getElementById('lives').textContent = game.lives;
     document.getElementById('score').textContent = game.score;
     document.getElementById('level').textContent = game.level;
+    
+    console.log("Lives set to:", game.lives);
 }
-
 
 function setupEventListeners() {
     // Keyboard controls
@@ -964,7 +902,7 @@ function setupEventListeners() {
     document.getElementById('saveScoreBtn').addEventListener('click', saveScore);
     document.getElementById('restartBtn').addEventListener('click', function() {
         document.getElementById('gameOver').style.display = 'none';
-        showStartScreen();
+        showStartScreen();  // This now includes resetGameControls
     });
 
     // High scores button
@@ -1167,6 +1105,9 @@ function updateStartScreenWithAchievements() {
 function showStartScreen() {
     document.getElementById('startScreen').style.display = 'flex';
     game.isRunning = false;
+
+    // Reset game controls to ensure buttons work after game over
+    resetGameControls();
     
     // Dispatch game state change event
     const event = new CustomEvent('gameStateChange', { 
@@ -1177,19 +1118,21 @@ function showStartScreen() {
 
 // Update startGame to use difficulty settings
 function startGame(difficulty) {
-    console.log('Starting game with difficulty:', difficulty);
+    console.log(`Starting game with difficulty: ${difficulty}`);
+    
+    // Initialize game state
     game.difficulty = difficulty;
     game.level = 1;
     game.score = 0;
-    game.lives = 3; // Reset lives
     
-    // Apply difficulty settings
+    // Apply difficulty settings BEFORE setting up UI
+    // This ensures lives are set correctly based on difficulty
     applyDifficultySettings();
     
     // Hide start screen
     document.getElementById('startScreen').style.display = 'none';
     
-    // Reset player
+    // Reset player state
     player.x = 50;
     player.y = 400;
     player.speedX = 0;
@@ -1198,15 +1141,17 @@ function startGame(difficulty) {
     player.speedBoost = 0;
     player.invincible = false;
     
-    // Make sure UI is updated
+    // Update UI to match initialized state
     document.getElementById('score').textContent = game.score;
     document.getElementById('level').textContent = game.level;
     document.getElementById('lives').textContent = game.lives;
     
+    console.log(`Game initialized with ${game.lives} lives in ${difficulty} mode`);
+    
     // Load the first level
     loadLevel(game.level);
 }
-
+    
 // Then update the loadLevel function to set the proper level width:
 function loadLevel(levelNum) {
     // Reset player position
@@ -1324,6 +1269,7 @@ function setGameRunning(isRunning) {
     }
 }
 
+// Improved collision detection function
 function collides(a, b) {
     return a.x < b.x + b.width &&
            a.x + a.width > b.x &&
@@ -1368,44 +1314,91 @@ function update() {
         createJumpParticles(player.x + player.width/2, player.y + player.height);
     }
 
-    // Update player position
+    // Store original position for collision detection
+    const originalX = player.x;
+    const originalY = player.y;
+    
+    // Update player position for X axis first
     player.x += player.speedX;
-    player.y += player.speedY;
     
-    
-    // Boundary checking
+    // Boundary checking for X axis
     if (player.x < 0) player.x = 0;
-    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+    if (player.x + player.width > levelWidth) player.x = levelWidth - player.width;
     
     const currentLevel = levels[game.level - 1];
     
-    // Check platform collisions
+    // Check X-axis platform collisions first
+    currentLevel.platforms.forEach(platform => {
+        if (collides(player, platform)) {
+            // Hit from left
+            if (player.speedX > 0 && originalX + player.width <= platform.x + 1) {
+                player.x = platform.x - player.width;
+            }
+            // Hit from right
+            else if (player.speedX < 0 && originalX >= platform.x + platform.width - 1) {
+                player.x = platform.x + platform.width;
+            }
+        }
+    });
+    
+    // Now update Y position separately
+    player.y += player.speedY;
+    
+    // Check Y-axis platform collisions
     let onGround = false;
     currentLevel.platforms.forEach(platform => {
         if (collides(player, platform)) {
             // Coming from above (landing)
-            if (player.speedY > 0 && player.y + player.height - player.speedY <= platform.y) {
+            if (player.speedY > 0 && originalY + player.height <= platform.y + (player.speedY + 1)) {
                 player.y = platform.y - player.height;
                 player.speedY = 0;
                 player.isJumping = false;
                 onGround = true;
             }
             // Hit from below
-            else if (player.speedY < 0 && player.y - player.speedY >= platform.y + platform.height) {
+            else if (player.speedY < 0 && originalY >= platform.y + platform.height + (player.speedY - 1)) {
                 player.y = platform.y + platform.height;
                 player.speedY = 0;
-            }
-            // Hit from left
-            else if (player.speedX > 0 && player.x + player.width - player.speedX <= platform.x) {
-                player.x = platform.x - player.width;
-            }
-            // Hit from right
-            else if (player.speedX < 0 && player.x - player.speedX >= platform.x + platform.width) {
-                player.x = platform.x + platform.width;
             }
         }
     });
     
+    // Add this failsafe: if player is moving too fast, check intermediate positions
+    if (!onGround && Math.abs(player.speedY) > 10) {
+        // Check for high-speed collision by interpolating positions
+        const steps = Math.ceil(Math.abs(player.speedY) / 5);
+        const stepY = player.speedY / steps;
+        
+        for (let i = 1; i < steps; i++) {
+            const testY = originalY + stepY * i;
+            const testPlayer = {
+                x: player.x,
+                y: testY,
+                width: player.width,
+                height: player.height
+            };
+            
+            for (const platform of currentLevel.platforms) {
+                if (collides(testPlayer, platform)) {
+                    // We would have collided at this intermediate position
+                    if (player.speedY > 0) {
+                        player.y = platform.y - player.height;
+                        player.speedY = 0;
+                        player.isJumping = false;
+                        onGround = true;
+                    } else {
+                        player.y = platform.y + platform.height;
+                        player.speedY = 0;
+                    }
+                    break;
+                }
+            }
+            
+            if (onGround) break;
+        }
+    }
+    
+    // The rest of the update function remains the same
     // Check for coin collisions
     currentLevel.coins.forEach(coin => {
         if (!coin.collected && collides(player, coin)) {
@@ -1502,14 +1495,14 @@ function update() {
         player.y = 400;
     }
     
-  // Update particles
-  updateParticles();
-  
-  // Update floating messages
-  updateFloatingMessages();
-
-  // Fix the function name - use capital C
-  updateCamera();
+    // Update particles
+    updateParticles();
+    
+    // Update floating messages
+    updateFloatingMessages();
+    
+    // Update camera
+    updateCamera();
 }
 
 // Create jump particles for better feedback
@@ -1551,13 +1544,15 @@ function updateCamera() {
     camera.y = 0; // No vertical scrolling
 }
 
-
 // Player hit function
 function playerHit() {
     if (player.invincible) return;
     
+    // Reduce lives
     game.lives--;
     document.getElementById('lives').textContent = game.lives;
+    
+    console.log(`Player hit! Lives reduced to: ${game.lives}`);
     
     // Play sound
     sounds.death.currentTime = 0;
@@ -1566,86 +1561,128 @@ function playerHit() {
     // Create particles
     createHitParticles(player.x + player.width/2, player.y + player.height/2);
     
-    // Flash player
+    // Flash player - make invincible temporarily to avoid double hits
     player.invincible = true;
-    player.invincibleTime = Date.now() + 1500; // Temporary invincibility after hit
+    player.invincibleTime = Date.now() + 1500;
     
-    // Check game over
+    // Handle game over if no lives left
     if (game.lives <= 0) {
-        gameOver();
+        console.log("No lives left - triggering game over");
+        
+        // We need a slight delay to allow the current frame to complete
+        // This ensures all state updates are processed before showing game over screen
+        setTimeout(function() {
+            gameOver();
+        }, 200);
+        
+        // Keep player safe until game over screen appears
+        player.invincible = true;
     }
 }
 
 // Complete level function
 function completeLevel() {
-    // Stop the game
+    console.log(`Completing level ${game.level}`);
     setGameRunning(false);
     
-    // Play sound
-    sounds.levelComplete.currentTime = 0;
-    sounds.levelComplete.play();
+    if (sounds.levelComplete.readyState >= 2) {
+        sounds.levelComplete.currentTime = 0;
+        sounds.levelComplete.play().catch(error => {
+            console.error('Error playing level complete sound:', error);
+        });
+    } else {
+        console.log('Level complete sound not ready');
+    }
     
-    // Calculate time bonus
+    // Add time bonus to score
     const timeBonus = Math.max(0, 30000 - levelCurrentTime);
     const timeBonusPoints = Math.floor(timeBonus / 100);
-    
-    // Add bonus points
     game.score += timeBonusPoints;
     
-    // Check for achievements
-    
-    // Speed Runner achievement
+    // Handle achievements
     if (levelCurrentTime < 30000 && !achievements.SPEED_RUNNER.unlocked) {
         achievements.SPEED_RUNNER.unlocked = true;
         showAchievementNotification(achievements.SPEED_RUNNER);
         saveAchievements();
     }
     
-    // Survivor achievement
     if (game.lives === game.levelStartLives && !achievements.SURVIVOR.unlocked) {
         achievements.SURVIVOR.unlocked = true;
         showAchievementNotification(achievements.SURVIVOR);
         saveAchievements();
     }
     
-    // Update level complete screen
     document.getElementById('levelScore').textContent = `Score: ${game.score} (Time Bonus: ${timeBonusPoints})`;
     
     // Increment level
     game.level++;
     
-    // Check if there are more levels
-    if (game.level > levels.length) {
-        // Game completed
-        document.getElementById('nextLevelBtn').textContent = "Restart Game";
+    console.log(`Moving to level ${game.level}`);
+    
+    // Check if this was the final level
+    // We'll consider any level beyond our defined levels array as the end of the game
+    if (game.level > 3) { // Assuming 3 predefined levels
+        console.log("Final level completed! Game finished.");
+        
+        // Show game completion message
+        document.getElementById('levelComplete').style.display = 'flex';
+        document.getElementById('nextLevelBtn').textContent = "Game Completed! Save Score";
+        
+        // Change button action to show game over screen instead of next level
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
-            game.level = 1;
-            showStartScreen();
+            
+            // Show the game over screen to let player save their score
+            document.getElementById('finalScore').textContent = `Final Score: ${game.score}`;
+            document.getElementById('gameOver').style.display = 'flex';
+            
+            // Make sure the game over buttons are properly set up
+            setupGameOverButtons();
+            
+            console.log("Game over screen displayed after game completion");
         };
     } else {
-        // More levels to play
+        // Normal level completion for levels 1 and 2
+        document.getElementById('levelComplete').style.display = 'flex';
         document.getElementById('nextLevelBtn').textContent = "Next Level";
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
             loadLevel(game.level);
         };
     }
-    
-    // Show level complete screen
-    document.getElementById('levelComplete').style.display = 'flex';
 }
+
 
 // Game over function
 function gameOver() {
-    // Stop the game
+    console.log("GAME OVER FUNCTION CALLED");
+    
+    // Force game to stop
     setGameRunning(false);
     
-    // Update game over screen
+    // Ensure player can't move
+    keys.ArrowRight = false;
+    keys.ArrowLeft = false;
+    keys.Space = false;
+    
+    // Update final score display
     document.getElementById('finalScore').textContent = `Final Score: ${game.score}`;
     
-    // Show game over screen
-    document.getElementById('gameOver').style.display = 'flex';
+    // Ensure the game over screen is completely visible
+    const gameOverScreen = document.getElementById('gameOver');
+    gameOverScreen.style.display = 'flex';
+    gameOverScreen.style.opacity = '1';
+    gameOverScreen.style.zIndex = '1000'; // Ensure it's on top
+    
+    // Force refresh the buttons
+    setupGameOverButtons();
+    
+    console.log("Game over screen should be displayed now");
+    
+    // This is critical - dispatch an event to notify any listeners that game is over
+    document.dispatchEvent(new CustomEvent('gameStateChange', { 
+        detail: { isRunning: false, gameOver: true } 
+    }));
 }
 
 // Particles functions
@@ -1721,21 +1758,23 @@ function updateFloatingMessages() {
 function draw() {
     // Clear with sky gradient
     const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGradient.addColorStop(0, '#64B5F6');
-    skyGradient.addColorStop(1, '#90CAF9');
-    ctx.fillStyle = skyGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Save the context state before applying camera transform
-    ctx.save();
-    
-    // Apply camera transform
-    ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
-    
-    // Draw background elements first
-    drawBackground();
-    
-    const currentLevel = levels[game.level - 1];
+        skyGradient.addColorStop(0, '#64B5F6');
+        skyGradient.addColorStop(1, '#90CAF9');
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+        
+        drawBackground();
+        
+        const currentLevel = levels[game.level - 1];
+        if (!currentLevel) {
+            console.log('No level data for level', game.level);
+            ctx.restore();
+            drawUI();
+            return;
+        }
     
     // GROUP 1: BACK LAYER - Draw the ground and platforms
     // --------------------------------------------------------
@@ -2612,6 +2651,7 @@ function designLevel(difficulty) {
     const levelWidth = 800;
     const groundY = 450;
     
+    
     // Player jump metrics (these determine platform placement)
     const playerJumpHeight = difficulty === 'easy' ? 120 : (difficulty === 'medium' ? 110 : 100);
     const playerJumpDistance = difficulty === 'easy' ? 180 : (difficulty === 'medium' ? 160 : 140);
@@ -2662,13 +2702,17 @@ function designLevel(difficulty) {
             });
         }
         
-        // Move to next platform position
-        const distanceMultiplier = 0.7 + Math.random() * 0.6; // 70% to 130% of standard jump
+        // Move to next platform position - IMPROVED SPACING LOGIC
+        // Make sure the next platform is reachable by capping the max distance
+        const minDistanceMultiplier = 0.7;  // At least 70% of standard jump
+        const maxDistanceMultiplier = 0.9;  // At most 90% of standard jump for safety
+        const distanceMultiplier = minDistanceMultiplier + Math.random() * (maxDistanceMultiplier - minDistanceMultiplier);
         currentX += playerJumpDistance * distanceMultiplier;
         
         // Occasionally raise or lower the path
         if (i > 0 && i < platformCount - 1 && Math.random() > 0.5) {
-            currentY -= Math.random() * 60;
+            // Smaller height changes for better playability
+            currentY -= Math.random() * 40;
             currentY = Math.max(120, currentY); // Don't go too high
         }
     }
@@ -2809,183 +2853,163 @@ function updateLevelData() {
 }
 
 function generateDynamicLevel(levelNum) {
-    console.log("Generating dynamic level:", levelNum, "with difficulty:", game.difficulty);
     const difficulty = game.difficulty;
-    
-    // Base parameters
     const groundY = 450;
     
-    // Adjust parameters based on level number for progressive difficulty
-    const platformCount = Math.min(3 + levelNum, 12); // More platforms in higher levels, cap at 12
-    
-    // Obstacles increase with level
-    const groundObstacleCount = Math.min(levelNum + 1, 8); // More obstacles in higher levels, cap at 8
-    const movingObstacleCount = difficulty === 'easy' ? 0 : Math.min(Math.floor(levelNum/2), 5);
-    
-    // Create empty level structure
+    // Create a new level object
     const level = {
-        platforms: [
-            { x: 0, y: groundY, width: 800, height: 50 } // Ground
-        ],
+        platforms: [],  // Start with empty platforms array - we'll add ground later
         obstacles: [],
         coins: [],
         powerUps: [],
         outlet: { x: 0, y: 0, width: 40, height: 40 }
     };
     
-    // Create platform path - we'll use a more careful approach
+    const basePlatformCount = 4 + Math.floor(levelNum / 2);
+    const platformCount = difficulty === 'easy' ? basePlatformCount + 2 :
+                         difficulty === 'medium' ? basePlatformCount :
+                         basePlatformCount - 1;
+    
+    const baseObstacleCount = 2 + Math.floor(levelNum / 2);
+    const obstacleCount = difficulty === 'easy' ? Math.max(0, baseObstacleCount - 2) :
+                          difficulty === 'medium' ? baseObstacleCount :
+                          baseObstacleCount + 2;
+    
+    const movingObstacleCount = difficulty === 'easy' ? 0 :
+                                difficulty === 'medium' ? Math.floor(levelNum / 3) :
+                                Math.floor(levelNum / 2);
+    
+    const powerUpCount = difficulty === 'easy' ? 2 : 1;
+    
+    const jumpHeight = difficulty === 'easy' ? 100 : (difficulty === 'medium' ? 110 : 120);
+    const jumpDistance = difficulty === 'easy' ? 140 : (difficulty === 'medium' ? 160 : 180);
+    
     let lastX = 80;
     let lastY = groundY - 80;
     
-    // Calculate jump distances based on difficulty and player capabilities
-    const baseJumpDistance = 
-        difficulty === 'easy' ? 140 : 
-        (difficulty === 'medium' ? 160 : 180);
-    
-    const maxJumpHeight =
-        difficulty === 'easy' ? 100 :
-        (difficulty === 'medium' ? 110 : 120);
-    
+    // Generate all platforms first (except ground)
     for (let i = 0; i < platformCount; i++) {
-        // Platform width varies slightly
-        const platformWidth = 60 + Math.random() * 40;
-        
-        // Add platform
-        const platform = {
+        const platformWidth = 60 + Math.random() * 30;
+        level.platforms.push({
             x: lastX,
             y: lastY,
             width: platformWidth,
             height: 20
-        };
+        });
         
-        level.platforms.push(platform);
-        
-        // Add coin on most platforms (80% chance)
         if (Math.random() < 0.8) {
-            level.coins.push({
-                x: lastX + platformWidth/2 - 10,
-                y: lastY - 30,
-                width: 20,
-                height: 20,
-                collected: false
-            });
+            const coinX = lastX + platformWidth/2 - 10;
+            const coinY = lastY - 30;
+            // Check if this position is too close to existing items
+            let tooClose = level.coins.some(c => Math.abs(c.x - coinX) < 40) ||
+                          level.powerUps.some(p => Math.abs(p.x - coinX) < 40);
+            if (!tooClose) {
+                level.coins.push({
+                    x: coinX,
+                    y: coinY,
+                    width: 20,
+                    height: 20,
+                    collected: false
+                });
+            }
         }
         
-        // Calculate next position - careful spacing that player can jump to
-        // Add some randomness but ensure it's reachable
-        const jumpVariation = Math.random() * 30 - 10; // -10 to +20 variation
-        const jumpDistance = baseJumpDistance + jumpVariation;
+        const jumpVariation = Math.random() * 20 - 10;
+        lastX += jumpDistance + jumpVariation;
         
-        lastX += jumpDistance;
-        
-        // Height changes - gradually get higher with some variation
         if (i < platformCount - 1) {
-            // Mix of up and down, but trending upward for overall challenge
-            const heightVariation = Math.random() * 60 - 20; // -20 to +40 variation
-            
-            // For higher levels, make greater height differences
-            const levelBonus = levelNum * 5; // Higher levels have higher platforms
-            lastY = Math.max(100, Math.min(groundY - 60, lastY - heightVariation - levelBonus));
-            
-            // Make sure jumps are possible (not too high)
-            const maxJumpableHeight = maxJumpHeight * 0.8; // 80% of max jump for safety
-            if (lastY < platform.y - maxJumpableHeight) {
-                lastY = platform.y - maxJumpableHeight + 10; // Keep it jumpable
-            }
+            const heightChange = (Math.random() * jumpHeight * 0.8) - (jumpHeight * 0.2);
+            lastY = Math.max(150, Math.min(groundY - 60, lastY - heightChange));
         }
     }
     
-    // Add ground obstacles - properly spaced
-    for (let i = 0; i < groundObstacleCount; i++) {
-        // Space obstacles evenly with some randomness
-        const obstacleX = 150 + (i * 600/groundObstacleCount) + (Math.random() * 50 - 25);
-        
-        // Make sure obstacles don't block jumping to platforms
-        let validPosition = true;
-        for (let j = 1; j < level.platforms.length; j++) {
-            const platform = level.platforms[j];
-            // Don't place obstacles directly below platforms or in jump paths
-            if (Math.abs(obstacleX - platform.x) < 40) {
-                validPosition = false;
+    // Position the outlet on the last platform
+    const lastPlatform = level.platforms[level.platforms.length - 1];
+    level.outlet = {
+        x: lastPlatform.x + lastPlatform.width/2 - 20,
+        y: lastPlatform.y - 50,
+        width: 40,
+        height: 40
+    };
+    
+    // Now add the ground platform AFTER calculating the rightmost element
+    // Find the rightmost element (platform or outlet)
+    let rightmostX = 0;
+    
+    // Check platforms
+    level.platforms.forEach(platform => {
+        const platformRight = platform.x + platform.width;
+        if (platformRight > rightmostX) rightmostX = platformRight;
+    });
+    
+    // Check outlet
+    const outletRight = level.outlet.x + level.outlet.width;
+    if (outletRight > rightmostX) rightmostX = outletRight;
+    
+    // Create the ground platform with sufficient width
+    const groundWidth = Math.max(800, rightmostX + 200); // Add extra safety margin
+    level.platforms.unshift({ x: 0, y: groundY, width: groundWidth, height: 50 });
+    
+    // Add obstacles after knowing where all platforms are
+    for (let i = 0; i < obstacleCount; i++) {
+        let x = 100 + Math.random() * (700 - obstacleCount * 50);
+        let valid = true;
+        for (let p of level.platforms) {
+            if (p.y < groundY && Math.abs(x - p.x) < 50) {
+                valid = false;
                 break;
             }
         }
-        
-        if (validPosition) {
-            level.obstacles.push({
-                x: obstacleX,
-                y: groundY - 20,
-                width: 20,
-                height: 20
-            });
+        if (valid) {
+            level.obstacles.push({ x, y: groundY - 20, width: 20, height: 20 });
         }
     }
     
-    // Add moving obstacles on platforms for medium and hard difficulties
+    // Add the rest of the elements (moving obstacles, power-ups, etc.)
     if (movingObstacleCount > 0) {
-        // Get platforms we can put obstacles on (not the first or last platform)
-        const availablePlatforms = level.platforms.filter((p, idx) => 
-            idx > 1 && idx < level.platforms.length - 1 && p.y < groundY);
-        
-        // Shuffle platforms to randomize placement
-        shuffleArray(availablePlatforms);
-        
-        for (let i = 0; i < Math.min(movingObstacleCount, availablePlatforms.length); i++) {
-            const platform = availablePlatforms[i];
-            
+        const platforms = level.platforms.slice(2, -1);
+        shuffleArray(platforms);
+        for (let i = 0; i < Math.min(movingObstacleCount, platforms.length); i++) {
+            const p = platforms[i];
             level.obstacles.push({
-                x: platform.x + platform.width/2 - 10,
-                y: platform.y - 20,
+                x: p.x + p.width/2 - 10,
+                y: p.y - 20,
                 width: 20,
                 height: 20,
-                speedX: difficulty === 'medium' ? 0.5 : 0.8,
-                startX: platform.x + platform.width/2 - 10,
-                range: platform.width * 0.6
+                speedX: difficulty === 'medium' ? 0.5 : 0.7,
+                startX: p.x + p.width/2 - 10,
+                range: p.width * 0.6
             });
         }
     }
     
-    // Add power-ups based on difficulty
-    const powerUpCount = difficulty === 'easy' ? 2 : (difficulty === 'medium' ? 1 : Math.random() > 0.5 ? 1 : 0);
-    const powerUpTypes = ['SPEED_BOOST', 'EXTRA_LIFE', 'INVINCIBILITY'];
-    
-    if (powerUpCount > 0 && level.platforms.length > 3) {
-        // Get platforms to place power-ups on (not first or last)
-        const powerUpPlatforms = level.platforms.filter((p, idx) => 
-            idx > 0 && idx < level.platforms.length - 1 && p.y < groundY);
-        
-        shuffleArray(powerUpPlatforms);
-        
-        for (let i = 0; i < Math.min(powerUpCount, powerUpPlatforms.length); i++) {
-            const platform = powerUpPlatforms[i];
-            const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
-            
+    const platformsForPowerUps = level.platforms.slice(1, -1);
+    shuffleArray(platformsForPowerUps);
+    for (let i = 0; i < Math.min(powerUpCount, platformsForPowerUps.length); i++) {
+        const p = platformsForPowerUps[i];
+        const powerUpX = p.x + p.width/2 - 15;
+        const powerUpY = p.y - 35;
+        let tooClose = level.coins.some(c => Math.abs(c.x - powerUpX) < 40) ||
+                      level.powerUps.some(pu => Math.abs(pu.x - powerUpX) < 40);
+        if (!tooClose) {
+            const type = Object.keys(powerUpTypes)[Math.floor(Math.random() * 3)];
             level.powerUps.push({
-                x: platform.x + platform.width/2 - 15,
-                y: platform.y - 35,
+                x: powerUpX,
+                y: powerUpY,
                 width: 30,
                 height: 30,
-                type: type,
+                type,
                 collected: false,
-                pulseRate: 0.008 + (Math.random() * 0.004),
+                pulseRate: 0.008,
                 pulseTime: 0
             });
         }
     }
-    
-    // Place outlet on the last platform
-    if (level.platforms.length > 1) {
-        const lastPlatform = level.platforms[level.platforms.length - 1];
-        level.outlet = {
-            x: lastPlatform.x + lastPlatform.width/2 - 20,
-            y: lastPlatform.y - 50,
-            width: 40,
-            height: 40
-        };
-    } else {
-        // Fallback if something went wrong
-        level.outlet = { x: 700, y: 400, width: 40, height: 40 };
-    }
+
+    level.coins = level.coins.filter(coin => {
+        const distanceToOutlet = Math.abs(coin.x - level.outlet.x);
+        return distanceToOutlet > 50; // Ensure coin is at least 50px away from outlet
+    });
     
     return level;
 }
@@ -2997,4 +3021,100 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+}
+
+function resetGameControls() {
+    console.log("Resetting game controls");
+    
+    // Clear existing event listeners by cloning and replacing elements
+    const easyBtn = document.getElementById('easyBtn');
+    const mediumBtn = document.getElementById('mediumBtn');
+    const hardBtn = document.getElementById('hardBtn');
+    
+    if (easyBtn && mediumBtn && hardBtn) {
+        // Clone each button to remove existing event listeners
+        const newEasyBtn = easyBtn.cloneNode(true);
+        const newMediumBtn = mediumBtn.cloneNode(true);
+        const newHardBtn = hardBtn.cloneNode(true);
+        
+        // Replace original buttons with clones
+        easyBtn.parentNode.replaceChild(newEasyBtn, easyBtn);
+        mediumBtn.parentNode.replaceChild(newMediumBtn, mediumBtn);
+        hardBtn.parentNode.replaceChild(newHardBtn, hardBtn);
+        
+        // Add new event listeners
+        newEasyBtn.addEventListener('click', function() {
+            console.log('Easy button clicked');
+            startGame('easy');
+        });
+        
+        newMediumBtn.addEventListener('click', function() {
+            console.log('Medium button clicked');
+            startGame('medium');
+        });
+        
+        newHardBtn.addEventListener('click', function() {
+            console.log('Hard button clicked');
+            startGame('hard');
+        });
+        
+        console.log("Difficulty buttons have been reset");
+    } else {
+        console.error('Could not find difficulty buttons');
+    }
+}
+
+// New function to set up all game buttons directly
+function setupAllGameButtons() {
+    // Level complete button
+    document.getElementById('nextLevelBtn').addEventListener('click', function() {
+        document.getElementById('levelComplete').style.display = 'none';
+        loadLevel(game.level);
+    });
+
+    // Game over buttons
+    document.getElementById('saveScoreBtn').addEventListener('click', saveScore);
+    document.getElementById('restartBtn').addEventListener('click', function() {
+        document.getElementById('gameOver').style.display = 'none';
+        showStartScreen();
+    });
+
+    // High scores button
+    document.getElementById('backBtn').addEventListener('click', function() {
+        document.getElementById('highScores').style.display = 'none';
+        showStartScreen();
+    });
+    
+    // Only set up keyboard controls if they haven't been set up already
+    if (!window.keyboardControlsInitialized) {
+        // Set up keyboard controls
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'ArrowRight') keys.ArrowRight = true;
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+            if (e.code === 'ArrowUp' || e.code === 'Space') {
+                keys.Space = true;
+                // Prevent spacebar from scrolling the page
+                if (e.code === 'Space') e.preventDefault();
+            }
+            
+            // Add pause key
+            if (e.code === 'Escape' && game.isRunning) {
+                togglePause();
+            }
+            
+            // Add save keyboard shortcut
+            if (e.code === 'KeyS' && e.ctrlKey && game.isRunning) {
+                e.preventDefault();
+                saveGameState();
+            }
+        });
+
+        document.addEventListener('keyup', function(e) {
+            if (e.code === 'ArrowRight') keys.ArrowRight = false;
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+            if (e.code === 'ArrowUp' || e.code === 'Space') keys.Space = false;
+        });
+        
+        window.keyboardControlsInitialized = true;
+    }
 }
