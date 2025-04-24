@@ -357,15 +357,31 @@ window.onload = function() {
   
     // Make sure to call setupGameOverButtons to initialize the buttons
     setupGameOverButtons();
+
+    enhanceWindowOnload();
     
     function enhanceWindowOnload() {
-        // Add this line to the existing window.onload function
+        console.log("Enhanced window.onload running");
+        
+        // Set up game over buttons immediately
         setupGameOverButtons();
         
-        // Also ensure the player starts with the correct number of lives based on difficulty
+        // Make sure difficulty settings are applied
         applyDifficultySettings();
+        
+        // Add extra event listeners for debugging
+        document.addEventListener('gameStateChange', function(e) {
+            console.log("Game state changed:", e.detail);
+        });
+        
+        // Initialize manually if needed
+        // Most importantly, ensure the game over screen is properly formatted
+        const gameOverScreen = document.getElementById('gameOver');
+        if (gameOverScreen) {
+            gameOverScreen.style.zIndex = '1000';
+            console.log("Game over screen initialized");
+        }
     }
-    
     
 };
 
@@ -651,11 +667,22 @@ function saveAchievements() {
 
 // Save score function
 function saveScore() {
-    const playerName = document.getElementById('playerName').value.trim();
+    console.log("saveScore function called");
+    
+    // Get player name with proper validation
+    const playerNameInput = document.getElementById('playerName');
+    if (!playerNameInput) {
+        console.error("Could not find playerName input element");
+        return;
+    }
+    
+    const playerName = playerNameInput.value.trim();
     if (playerName === '') {
         alert('Please enter your name');
         return;
     }
+    
+    console.log(`Saving score for player: ${playerName}`);
     
     // Add score to high scores
     game.highScores.push({
@@ -676,24 +703,39 @@ function saveScore() {
     // Save to local storage
     localStorage.setItem('powerPlugScores', JSON.stringify(game.highScores));
     
-    // Show high scores
-    document.getElementById('gameOver').style.display = 'none';
+    // Switch to high scores screen
+    const gameOverScreen = document.getElementById('gameOver');
+    if (gameOverScreen) {
+        gameOverScreen.style.display = 'none';
+    } else {
+        console.error("Could not find gameOver element");
+    }
+    
     showHighScores();
 }
 
+
 function setupGameOverButtons() {
-    // Get the buttons
+    console.log("Setting up game over buttons");
+    
+    // Get references to the buttons
     const saveScoreBtn = document.getElementById('saveScoreBtn');
     const restartBtn = document.getElementById('restartBtn');
     
-    // Clone and replace to remove old listeners
+    if (!saveScoreBtn || !restartBtn) {
+        console.error("Could not find game over buttons!");
+        return;
+    }
+    
+    // Create clones to remove old event listeners
     const newSaveScoreBtn = saveScoreBtn.cloneNode(true);
     const newRestartBtn = restartBtn.cloneNode(true);
     
+    // Replace originals with clones
     saveScoreBtn.parentNode.replaceChild(newSaveScoreBtn, saveScoreBtn);
     restartBtn.parentNode.replaceChild(newRestartBtn, restartBtn);
     
-    // Add new listeners
+    // Add new event listeners with debugging info
     newSaveScoreBtn.addEventListener('click', function() {
         console.log("Save score button clicked");
         saveScore();
@@ -704,6 +746,8 @@ function setupGameOverButtons() {
         document.getElementById('gameOver').style.display = 'none';
         showStartScreen();
     });
+    
+    console.log("Game over buttons have been set up");
 }
 
 // Make sure showHighScores function exists
@@ -1058,29 +1102,41 @@ function showStartScreen() {
 
 // Update startGame to use difficulty settings
 function startGame(difficulty) {
-    console.log('Starting game with difficulty:', difficulty);
-        game.difficulty = difficulty;
-        game.level = 1;
-        game.score = 0;
-        
-        applyDifficultySettings();
-        document.getElementById('startScreen').style.display = 'none';
-        
-        player.x = 50;
-        player.y = 400;
-        player.speedX = 0;
-        player.speedY = 0;
-        player.isJumping = false;
-        player.speedBoost = 0;
-        player.invincible = false;
-        
-        document.getElementById('score').textContent = game.score;
-        document.getElementById('level').textContent = game.level;
-        document.getElementById('lives').textContent = game.lives;
-        
-        loadLevel(game.level);
+function startGame(difficulty) {
+    console.log(`Starting game with difficulty: ${difficulty}`);
+    
+    // Initialize game state
+    game.difficulty = difficulty;
+    game.level = 1;
+    game.score = 0;
+    
+    // Apply difficulty settings BEFORE setting up UI
+    // This ensures lives are set correctly based on difficulty
+    applyDifficultySettings();
+    
+    // Hide start screen
+    document.getElementById('startScreen').style.display = 'none';
+    
+    // Reset player state
+    player.x = 50;
+    player.y = 400;
+    player.speedX = 0;
+    player.speedY = 0;
+    player.isJumping = false;
+    player.speedBoost = 0;
+    player.invincible = false;
+    
+    // Update UI to match initialized state
+    document.getElementById('score').textContent = game.score;
+    document.getElementById('level').textContent = game.level;
+    document.getElementById('lives').textContent = game.lives;
+    
+    console.log(`Game initialized with ${game.lives} lives in ${difficulty} mode`);
+    
+    // Load the first level
+    loadLevel(game.level);
 }
-
+    
 // Then update the loadLevel function to set the proper level width:
 function loadLevel(levelNum) {
     // Reset player position
@@ -1478,8 +1534,11 @@ function updateCamera() {
 function playerHit() {
     if (player.invincible) return;
     
+    // Reduce lives
     game.lives--;
     document.getElementById('lives').textContent = game.lives;
+    
+    console.log(`Player hit! Lives reduced to: ${game.lives}`);
     
     // Play sound
     sounds.death.currentTime = 0;
@@ -1487,23 +1546,26 @@ function playerHit() {
     
     // Create particles
     createHitParticles(player.x + player.width/2, player.y + player.height/2);
-
-   
-    // Flash player
-    player.invincible = true;
-    player.invincibleTime = Date.now() + 1500; // Temporary invincibility after hit
     
-    console.log("Player hit. Lives remaining:", game.lives);
-    // Check game over
+    // Flash player - make invincible temporarily to avoid double hits
+    player.invincible = true;
+    player.invincibleTime = Date.now() + 1500;
+    
+    // Handle game over if no lives left
     if (game.lives <= 0) {
-        console.log("No lives left. Calling gameOver()");
+        console.log("No lives left - triggering game over");
         
-        // Add a small delay to ensure all state updates are complete
+        // We need a slight delay to allow the current frame to complete
+        // This ensures all state updates are processed before showing game over screen
         setTimeout(function() {
             gameOver();
-        }, 100);
+        }, 200);
+        
+        // Keep player safe until game over screen appears
+        player.invincible = true;
     }
 }
+
 
 // Complete level function
 function completeLevel() {
@@ -1560,19 +1622,34 @@ function completeLevel() {
 
 // Game over function
 function gameOver() {
-    // Stop the game
-    setGameRunning(false);
+    console.log("GAME OVER FUNCTION CALLED");
     
-    // Update game over screen
+    // Force game to stop
+    game.isRunning = false;
+    
+    // Ensure player can't move
+    keys.ArrowRight = false;
+    keys.ArrowLeft = false;
+    keys.Space = false;
+    
+    // Update final score display
     document.getElementById('finalScore').textContent = `Final Score: ${game.score}`;
-
-    // Reset game controls to ensure buttons work after game over
-    setupGameOverButtons(); // Call this directly to ensure buttons are set up
     
-    // Show game over screen explicitly
-    document.getElementById('gameOver').style.display = 'flex';
+    // Ensure the game over screen is completely visible
+    const gameOverScreen = document.getElementById('gameOver');
+    gameOverScreen.style.display = 'flex';
+    gameOverScreen.style.opacity = '1';
+    gameOverScreen.style.zIndex = '1000'; // Ensure it's on top
+    
+    // Force refresh the buttons
+    setupGameOverButtons();
     
     console.log("Game over screen should be displayed now");
+    
+    // This is critical - dispatch an event to notify any listeners that game is over
+    document.dispatchEvent(new CustomEvent('gameStateChange', { 
+        detail: { isRunning: false, gameOver: true } 
+    }));
 }
 
 // Particles functions
