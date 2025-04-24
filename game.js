@@ -1102,7 +1102,6 @@ function showStartScreen() {
 
 // Update startGame to use difficulty settings
 function startGame(difficulty) {
-function startGame(difficulty) {
     console.log(`Starting game with difficulty: ${difficulty}`);
     
     // Initialize game state
