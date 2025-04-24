@@ -359,7 +359,7 @@ window.onload = function() {
     setupGameOverButtons();
 
     enhanceWindowOnload();
-    
+
     function enhanceWindowOnload() {
         console.log("Enhanced window.onload running");
         
@@ -369,19 +369,36 @@ window.onload = function() {
         // Make sure difficulty settings are applied
         applyDifficultySettings();
         
+        // Reset game controls to ensure start buttons work
+        resetGameControls();
+        
         // Add extra event listeners for debugging
         document.addEventListener('gameStateChange', function(e) {
             console.log("Game state changed:", e.detail);
         });
         
-        // Initialize manually if needed
-        // Most importantly, ensure the game over screen is properly formatted
+        // Initialize game over screen
         const gameOverScreen = document.getElementById('gameOver');
         if (gameOverScreen) {
             gameOverScreen.style.zIndex = '1000';
             console.log("Game over screen initialized");
         }
+        
+        // Initialize difficulty buttons
+        // This is critical since they might not have been properly set up
+        const easyBtn = document.getElementById('easyBtn');
+        const mediumBtn = document.getElementById('mediumBtn');
+        const hardBtn = document.getElementById('hardBtn');
+        
+        if (easyBtn && mediumBtn && hardBtn) {
+            // Add direct click handlers
+            easyBtn.onclick = function() { startGame('easy'); };
+            mediumBtn.onclick = function() { startGame('medium'); };
+            hardBtn.onclick = function() { startGame('hard'); };
+            console.log("Difficulty buttons initialized directly");
+        }
     }
+
     
 };
 
@@ -713,7 +730,6 @@ function saveScore() {
     
     showHighScores();
 }
-
 
 function setupGameOverButtons() {
     console.log("Setting up game over buttons");
@@ -1528,7 +1544,6 @@ function updateCamera() {
     camera.y = 0; // No vertical scrolling
 }
 
-
 // Player hit function
 function playerHit() {
     if (player.invincible) return;
@@ -1564,7 +1579,6 @@ function playerHit() {
         player.invincible = true;
     }
 }
-
 
 // Complete level function
 function completeLevel() {
@@ -1624,7 +1638,7 @@ function gameOver() {
     console.log("GAME OVER FUNCTION CALLED");
     
     // Force game to stop
-    game.isRunning = false;
+    setGameRunning(false);
     
     // Ensure player can't move
     keys.ArrowRight = false;
@@ -2990,6 +3004,8 @@ function shuffleArray(array) {
 }
 
 function resetGameControls() {
+    console.log("Resetting game controls");
+    
     // Clear existing event listeners by cloning and replacing elements
     const easyBtn = document.getElementById('easyBtn');
     const mediumBtn = document.getElementById('mediumBtn');
@@ -3021,6 +3037,8 @@ function resetGameControls() {
             console.log('Hard button clicked');
             startGame('hard');
         });
+        
+        console.log("Difficulty buttons have been reset");
     } else {
         console.error('Could not find difficulty buttons');
     }
