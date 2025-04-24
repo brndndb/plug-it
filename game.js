@@ -1582,6 +1582,7 @@ function playerHit() {
 
 // Complete level function
 function completeLevel() {
+    console.log(`Completing level ${game.level}`);
     setGameRunning(false);
     
     if (sounds.levelComplete.readyState >= 2) {
@@ -1593,10 +1594,12 @@ function completeLevel() {
         console.log('Level complete sound not ready');
     }
     
+    // Add time bonus to score
     const timeBonus = Math.max(0, 30000 - levelCurrentTime);
     const timeBonusPoints = Math.floor(timeBonus / 100);
     game.score += timeBonusPoints;
     
+    // Handle achievements
     if (levelCurrentTime < 30000 && !achievements.SPEED_RUNNER.unlocked) {
         achievements.SPEED_RUNNER.unlocked = true;
         showAchievementNotification(achievements.SPEED_RUNNER);
@@ -1611,25 +1614,42 @@ function completeLevel() {
     
     document.getElementById('levelScore').textContent = `Score: ${game.score} (Time Bonus: ${timeBonusPoints})`;
     
+    // Increment level
     game.level++;
     
-    if (game.level > levels.length) {
-        document.getElementById('nextLevelBtn').textContent = "Restart Game";
+    console.log(`Moving to level ${game.level}`);
+    
+    // Check if this was the final level
+    // We'll consider any level beyond our defined levels array as the end of the game
+    if (game.level > 3) { // Assuming 3 predefined levels
+        console.log("Final level completed! Game finished.");
+        
+        // Show game completion message
+        document.getElementById('levelComplete').style.display = 'flex';
+        document.getElementById('nextLevelBtn').textContent = "Game Completed! Save Score";
+        
+        // Change button action to show game over screen instead of next level
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
-            game.level = 1;
-            showStartScreen();
+            
+            // Show the game over screen to let player save their score
+            document.getElementById('finalScore').textContent = `Final Score: ${game.score}`;
+            document.getElementById('gameOver').style.display = 'flex';
+            
+            // Make sure the game over buttons are properly set up
+            setupGameOverButtons();
+            
+            console.log("Game over screen displayed after game completion");
         };
     } else {
+        // Normal level completion for levels 1 and 2
+        document.getElementById('levelComplete').style.display = 'flex';
         document.getElementById('nextLevelBtn').textContent = "Next Level";
         document.getElementById('nextLevelBtn').onclick = function() {
             document.getElementById('levelComplete').style.display = 'none';
             loadLevel(game.level);
         };
     }
-    
-    // Ensure the level complete screen is shown for all difficulties
-    document.getElementById('levelComplete').style.display = 'flex';
 }
 
 
