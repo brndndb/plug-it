@@ -354,7 +354,10 @@ window.onload = function() {
     
     // Set up direct event handlers for other game buttons
     setupAllGameButtons();
-
+  
+    // Make sure to call setupGameOverButtons to initialize the buttons
+    setupGameOverButtons();
+    
     function enhanceWindowOnload() {
         // Add this line to the existing window.onload function
         setupGameOverButtons();
@@ -692,10 +695,12 @@ function setupGameOverButtons() {
     
     // Add new listeners
     newSaveScoreBtn.addEventListener('click', function() {
+        console.log("Save score button clicked");
         saveScore();
     });
     
     newRestartBtn.addEventListener('click', function() {
+        console.log("Play again button clicked");
         document.getElementById('gameOver').style.display = 'none';
         showStartScreen();
     });
@@ -767,6 +772,7 @@ function applyDifficultySettings() {
         }
     };
     
+    console.log("Applying difficulty settings for:", game.difficulty);
     const settings = difficultySettings[game.difficulty];
     
     game.lives = settings.lives;
@@ -780,6 +786,8 @@ function applyDifficultySettings() {
     document.getElementById('lives').textContent = game.lives;
     document.getElementById('score').textContent = game.score;
     document.getElementById('level').textContent = game.level;
+    
+    console.log("Lives set to:", game.lives);
 }
 
 function setupEventListeners() {
@@ -1054,7 +1062,6 @@ function startGame(difficulty) {
         game.difficulty = difficulty;
         game.level = 1;
         game.score = 0;
-        game.lives = 3;
         
         applyDifficultySettings();
         document.getElementById('startScreen').style.display = 'none';
@@ -1480,14 +1487,21 @@ function playerHit() {
     
     // Create particles
     createHitParticles(player.x + player.width/2, player.y + player.height/2);
-    
+
+   
     // Flash player
     player.invincible = true;
     player.invincibleTime = Date.now() + 1500; // Temporary invincibility after hit
     
+    console.log("Player hit. Lives remaining:", game.lives);
     // Check game over
     if (game.lives <= 0) {
-        gameOver();
+        console.log("No lives left. Calling gameOver()");
+        
+        // Add a small delay to ensure all state updates are complete
+        setTimeout(function() {
+            gameOver();
+        }, 100);
     }
 }
 
@@ -1553,10 +1567,12 @@ function gameOver() {
     document.getElementById('finalScore').textContent = `Final Score: ${game.score}`;
 
     // Reset game controls to ensure buttons work after game over
-    resetGameControls();
+    setupGameOverButtons(); // Call this directly to ensure buttons are set up
     
-    // Show game over screen (make sure this happens regardless of difficulty)
+    // Show game over screen explicitly
     document.getElementById('gameOver').style.display = 'flex';
+    
+    console.log("Game over screen should be displayed now");
 }
 
 // Particles functions
